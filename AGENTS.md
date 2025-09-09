@@ -2,6 +2,19 @@
 
 This file guides coding agents working in this repo. It explains how to run, test, and extend the app, and highlights conventions and caveats that will save you time.
 
+## Agent Quickstart
+- Overview: Minimal Process Flow Explorer with stepwise reveal from START, inspectable details, dark 3‑pane UI. Uses built‑in React Flow edges with labels + arrowheads; MiniMap intentionally removed.
+- Tech: Vite + React + TypeScript; React Flow (built‑in edges); Zustand; Tailwind; Vitest (unit) + Playwright (E2E). Node 18/20 recommended.
+- Data: In‑memory synthetic events at `src/data/sampleEvents.ts`.
+- Graph build: `src/lib/graph.ts` (`buildGraph`, `START_NODE_ID`). Nodes = activities + synthetic START. Edges = START → first activity per case + consecutive same‑case transitions; each edge has `count` and `traversals { caseId, startTs, endTs, durationMs }`.
+- Layout: `src/lib/layout.ts` (`computeLayout`) does simple BFS layering from START.
+- Reveal: `src/lib/step.ts` (`computeVisible`, `maxDepth`) filters by BFS depth; step 0 shows no edges.
+- State: `src/state/store.ts` (Zustand) — `graph`, `layout`, `step`, `maxStep`, `selection`, `getVisible()`, `setNodePosition()`; `init()` wires sample data + layout.
+- UI: `src/components/FlowCanvas.tsx` (built‑in edges, auto‑fit, Controls + Background), `ProcessNode.tsx` (keyboard a11y + hidden handles), `ControlsPanel.tsx` (slider, Next, legend, transitions count), `DetailsPanel.tsx` (node visits; edge counts + min/avg/max durations).
+- Tests: Unit in `src/lib/*.spec.ts`; E2E in `tests/e2e.spec.ts` (dev server auto‑started by Playwright config).
+- Commands: `npm install`; dev `npm run dev`; unit `npm run test`; E2E `npx playwright install chromium` then `npm run test:e2e`; lint/format `npm run lint` / `npm run format`.
+- Gotchas: Reveal always from START (no contextual reveal); built‑in edges only; ensure dark‑theme edge readability; auto‑fit uses `setTimeout(0)` after element updates.
+
 ## Quick Summary
 - Minimal web app to explore a process graph step‑by‑step with an inspectable details panel.
 - Tech: Vite + React + TypeScript, React Flow (built‑in edges), Tailwind, Zustand, Vitest, Playwright.
