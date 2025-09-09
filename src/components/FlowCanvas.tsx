@@ -2,7 +2,6 @@ import { useMemo, useCallback, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
-  MiniMap,
   Node,
   Edge,
   MarkerType,
@@ -119,7 +118,6 @@ function CanvasInner() {
         onNodesChange={onNodesChange}
         proOptions={{ hideAttribution: true }}
       >
-        <MiniMap pannable zoomable />
         <Controls />
         <Background color="#444" gap={24} />
       </ReactFlow>

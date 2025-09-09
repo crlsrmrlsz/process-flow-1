@@ -26,7 +26,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Uses built‑in `type: 'default'` edges with label and arrow marker for reliability.
   - Auto‑fits on step changes (`fitView({ padding: 0.2 })`).
   - Nodes set `sourcePosition: Right`, `targetPosition: Left`.
-  - Includes `MiniMap`, `Controls`, and a `Background` grid.
+  - Includes `Controls` and a `Background` grid.
   - Edge width scales subtly with count (log‑scaled) for readability on dark theme.
 - `src/components/ProcessNode.tsx`
   - Custom node with keyboard a11y. Includes invisible left/right `Handle`s to ensure edge anchoring.
