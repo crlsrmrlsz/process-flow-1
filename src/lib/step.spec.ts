@@ -8,13 +8,13 @@ describe('step filter', () => {
   const m = maxDepth(g);
 
   it('reveals nothing at step 0 (only START node)', () => {
-    const { visibleEdges } = computeVisible(g, { step: 0, enabled: false });
+    const { visibleEdges } = computeVisible(g, { step: 0 });
     expect(visibleEdges.size).toBe(0);
   });
 
   it('reveals more edges as step increases', () => {
-    const a = computeVisible(g, { step: 1, enabled: false }).visibleEdges.size;
-    const b = computeVisible(g, { step: Math.max(2, m), enabled: false }).visibleEdges.size;
+    const a = computeVisible(g, { step: 1 }).visibleEdges.size;
+    const b = computeVisible(g, { step: Math.max(2, m) }).visibleEdges.size;
     expect(b).toBeGreaterThanOrEqual(a);
   });
 

@@ -4,7 +4,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
 
 ## Quick Summary
 - Minimal web app to explore a process graph step‑by‑step with an inspectable details panel.
-- Tech: Vite + React + TypeScript, React Flow, Tailwind, Zustand, framer‑motion (light), Vitest, Playwright.
+- Tech: Vite + React + TypeScript, React Flow (built‑in edges), Tailwind, Zustand, Vitest, Playwright.
 - MVP intentionally simple: reveal from START only; no contextual/branch‑specific reveal.
 
 ## Common Bash Commands

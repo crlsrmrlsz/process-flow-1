@@ -4,9 +4,7 @@ Minimal web app to explore a process graph step-by-step with an inspectable deta
 
 ## Stack
 - Vite + React + TypeScript
-- React Flow for canvas
-- d3-shape for smooth curved edges
-- Framer Motion for subtle edge fade-in
+- React Flow for canvas (built-in edges)
 - Zustand for state
 - Tailwind CSS for styling
 - Tests: Vitest (+ RTL) and one Playwright smoke test
@@ -43,7 +41,7 @@ We derive a directed graph with a synthetic `START` node, transitions per consec
 - Stepwise reveal via slider and Next button
 - Optional: continue reveal from selected node
 - Node/edge selection updates right details panel
-- Smooth curved edges with subtle fade‑in
+- Built‑in edges with labels + arrowheads; hover emphasis; subtle width scaled by count
 - Keyboard: tab to focus nodes/edges, Enter selects
 
 ## Phase 2 Roadmap Hooks
@@ -54,4 +52,3 @@ We derive a directed graph with a synthetic `START` node, transitions per consec
 ## Notes
 - Layout is a simple BFS layering; dagre/ELK intentionally omitted for MVP.
 - Utilities are tested; UI has one smoke E2E.
-

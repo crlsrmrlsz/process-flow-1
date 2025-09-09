@@ -18,6 +18,7 @@ type FlowState = {
   setStep: (n: number) => void;
   nextStep: () => void;
   setSelection: (sel: Selection) => void;
+  setNodePosition: (id: string, pos: { x: number; y: number }) => void;
   getVisible: () => { visibleEdges: Set<string>; visibleNodes: Set<string> };
 };
 
@@ -43,6 +44,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   },
   setSelection: (sel) => {
     set({ selection: sel });
+  },
+  setNodePosition: (id, pos) => {
+    set((state) => ({ layout: { ...state.layout, [id]: pos } }));
   },
   getVisible: () => {
     const { graph, step } = get();

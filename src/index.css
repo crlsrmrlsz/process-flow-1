@@ -22,5 +22,4 @@ html, body, #root {
 /* Edge hover emphasis for built-in edges */
 .react-flow__edge:hover .react-flow__edge-path {
   stroke: #cbd5e1 !important; /* zinc-300 */
-  stroke-width: 4 !important;
 }

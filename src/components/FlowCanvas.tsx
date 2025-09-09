@@ -9,15 +9,15 @@ import ReactFlow, {
   useReactFlow,
   ReactFlowProvider,
   Position,
+  type NodeChange,
+  type OnNodesChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useFlowStore } from '@/state/store';
 import { ProcessNode } from './ProcessNode';
-import { SmoothEdge } from './SmoothEdge';
 import { START_NODE_ID } from '@/lib/graph';
 
 const nodeTypes = { process: ProcessNode } as const;
-const edgeTypes = { smooth: SmoothEdge } as const;
 
 function CanvasInner() {
   const graph = useFlowStore((s) => s.graph);
@@ -27,6 +27,7 @@ function CanvasInner() {
   const setSelection = useFlowStore((s) => s.setSelection);
   const step = useFlowStore((s) => s.step);
   const { fitView } = useReactFlow();
+  const setNodePosition = useFlowStore((s) => s.setNodePosition);
 
   const { nodes, edges } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[] };
@@ -45,6 +46,14 @@ function CanvasInner() {
         targetPosition: Position.Left,
         // keep nodes non-animated to reduce noise
       }));
+    const globalMax = Math.max(1, ...graph.edges.map((e) => e.count));
+    const minW = 0.3; // thinnest possible while still visible
+    const maxW = 3.0; // upper bound for very high counts
+    const widthFor = (count: number) => {
+      if (globalMax <= 1) return minW;
+      const v = Math.log(count) / Math.log(globalMax); // 0..1
+      return minW + v * (maxW - minW);
+    };
     const edges: Edge[] = graph.edges
       .filter((e) => visibleEdges.has(e.id))
       .map((e) => ({
@@ -53,7 +62,7 @@ function CanvasInner() {
         target: e.target,
         type: 'default',
         label: String(e.count),
-        style: { stroke: '#9ca3af', strokeWidth: 3 },
+        style: { stroke: '#9ca3af', strokeWidth: widthFor(e.count) },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
         selectable: true,
         interactionWidth: 24,
@@ -63,12 +72,19 @@ function CanvasInner() {
 
   const onNodeClick = useCallback((_: unknown, n: Node) => setSelection({ type: 'node', id: n.id }), [setSelection]);
   const onEdgeClick = useCallback((_: unknown, e: Edge) => setSelection({ type: 'edge', id: e.id }), [setSelection]);
+  const onNodesChange: OnNodesChange = useCallback((changes: NodeChange[]) => {
+    changes.forEach((ch) => {
+      if (ch.type === 'position' && ch.position) {
+        setNodePosition(ch.id, ch.position);
+      }
+    });
+  }, [setNodePosition]);
 
   const selectedEdgeId = selection?.type === 'edge' ? selection.id : undefined;
   const selectedNodeId = selection?.type === 'node' ? selection.id : undefined;
 
   const rfNodes = useMemo(() => {
-    return nodes.map((n) => ({ ...n, selected: n.id === selectedNodeId }));
+    return nodes.map((n) => ({ ...n, draggable: true, selected: n.id === selectedNodeId }));
   }, [nodes, selectedNodeId]);
   const rfEdges = useMemo(() => {
     return edges.map((e) => ({ ...e, selected: e.id === selectedEdgeId }));
@@ -96,11 +112,11 @@ function CanvasInner() {
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
         nodesConnectable={false}
         elementsSelectable
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
+        onNodesChange={onNodesChange}
         proOptions={{ hideAttribution: true }}
       >
         <MiniMap pannable zoomable />
