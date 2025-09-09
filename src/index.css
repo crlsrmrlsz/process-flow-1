@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --pane-bg: theme(colors.zinc.800);
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+.pane {
+  background-color: var(--pane-bg);
+}
+
+.focus-ring:focus {
+  outline: 2px solid theme(colors.indigo.400);
+  outline-offset: 2px;
+}
+
+/* Edge hover emphasis for built-in edges */
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #cbd5e1 !important; /* zinc-300 */
+  stroke-width: 4 !important;
+}
