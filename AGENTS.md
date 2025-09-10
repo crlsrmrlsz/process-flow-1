@@ -18,7 +18,8 @@ This file guides coding agents working in this repo. It explains how to run, tes
 ## Quick Summary
 - Minimal web app to explore a process graph step‑by‑step with an inspectable details panel.
 - Tech: Vite + React + TypeScript, React Flow (built‑in edges), Tailwind, Zustand, Vitest, Playwright.
-- MVP intentionally simple: reveal from START only; no contextual/branch‑specific reveal.
+- Data: spec‑driven synthetic event log for Restaurant Operating Permit process (v4). Primary storage: JSONL.GZ events, with precomputed `graph.json` for fast load.
+- Interactions: right‑click context menu; decouple by attribute with downstream propagation; layered decouples (e.g., Department → Person). Edge hover tooltip shows mean/p90 duration.
 
 ## Common Bash Commands
 - Install: `npm install`
@@ -39,7 +40,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Uses built‑in `type: 'default'` edges with label and arrow marker for reliability.
   - Auto‑fits on step changes (`fitView({ padding: 0.2 })`).
   - Nodes set `sourcePosition: Right`, `targetPosition: Left`.
-  - Includes `Controls` and a `Background` grid.
+  - Includes `Controls` and a `Background` grid; right‑click opens context menu; hover shows edge tooltip.
   - Edge width scales subtly with count (log‑scaled) for readability on dark theme.
 - `src/components/ProcessNode.tsx`
   - Custom node with keyboard a11y. Includes invisible left/right `Handle`s to ensure edge anchoring.
@@ -47,9 +48,13 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Shows node visit summary or edge traversal stats.
 - `src/components/ControlsPanel.tsx`
   - Step slider, “Next step”, small legend, and a “Transitions visible: N” sanity counter.
+- `src/components/ContextMenu.tsx` / `src/components/EdgeTooltip.tsx`
+  - Context menu with decouple actions (Department/Person/Channel/Priority/Doc Quality), clear/reset decouples.
+  - Edge tooltip shows mean/p90 duration on hover.
 - `src/state/store.ts`
   - Zustand store with `graph`, `layout`, `step`, `maxStep`, `selection`, and `getVisible()`.
   - Reveal always starts from `START` in MVP.
+  - Loads precomputed data when present: `/data/permit.small.graph.json` and `/data/permit.small.events.json` (fallback to bundled sample).
 - `src/lib/graph.ts`
   - Build graph from event log. Adds synthetic `START` node and per‑transition traversals/durations.
 - `src/lib/step.ts`
@@ -58,6 +63,12 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Simple BFS layering for deterministic positions.
 - `src/data/sampleEvents.ts`
   - Synthetic dataset (~30 events) across ~6 activities.
+- `docs/permit_process_spec.v4.json`
+  - Declarative spec for Restaurant Operating Permit process (states, transitions, resources, durations, capacities).
+- `scripts/generate_from_spec.mjs`
+  - Spec‑driven generator that emits JSONL(.gz) events.
+- `scripts/precompute_graph.mjs`
+  - Precomputes `public/data/permit.small.graph.json` and `public/data/permit.small.events.json` from JSONL for fast UI.
 - Tests
   - `src/lib/*.spec.ts`: unit tests for pure utils.
   - `tests/e2e.spec.ts`: Playwright smoke (edges computed + DOM edges exist + details update).
@@ -78,6 +89,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Linux: `sudo npx playwright install-deps chromium` if the browser won’t launch.
   - Run: `npm run test:e2e` (starts dev server via Playwright config).
   - The smoke test asserts both the computed visible transitions and DOM edge elements.
+  - Screenshot test captures context menu and decoupled canvas.
 
 ## Repository Etiquette
 - Branch names:
@@ -102,6 +114,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
 - Step 0 shows no edges by design; use step ≥ 1 to reveal transitions.
 - Edge visibility: using built‑in edges avoids layering issues seen with some custom edge implementations.
 - Auto‑fit relies on a `setTimeout(0)` after nodes/edges update so React Flow can recalc internals before fitting.
+- Precomputed files in `public/data` are preferred when present. For other datasets, ensure server serves JSON (avoid `.gz` without `Content-Encoding: gzip`).
 - ESLint 9+ conflicts with `@typescript-eslint` v7 peer deps. This project pins ESLint 8.x in devDependencies.
 - Playwright may fail to launch without OS libs on Linux — install deps if you see the warning banner.
 

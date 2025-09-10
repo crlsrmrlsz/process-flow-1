@@ -6,7 +6,7 @@ import { pipeline } from 'node:stream';
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { spec: 'docs/permit_process_spec.v4.json', size: 'small', out: 'data/permit_v4.small.events' };
+  const opts = { spec: 'docs/permit_process_spec.v4.json', size: 'small', out: 'data/permit.small.events' };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--spec') opts.spec = args[++i];
@@ -148,4 +148,3 @@ async function main() {
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
-

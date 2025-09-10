@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "gen:data": "node scripts/generate.mjs --size small --out data/permit.small --format jsonl.gz",
     "gen:data:medium": "node scripts/generate.mjs --size medium --out data/permit.medium --format jsonl.gz",
-    "gen:data:large": "node scripts/generate.mjs --size large --out data/permit.large --format jsonl.gz"
+    "gen:data:large": "node scripts/generate.mjs --size large --out data/permit.large --format jsonl.gz",
+    "gen:spec:small": "node scripts/generate_from_spec.mjs --spec docs/permit_process_spec.v4.json --size small --out data/permit.small.events"
   },
   "dependencies": {
     "react": "^18.3.1",

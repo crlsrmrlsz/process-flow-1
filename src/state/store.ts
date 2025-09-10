@@ -21,6 +21,7 @@ type FlowState = {
   ctxMenu: { open: boolean; pos: { x: number; y: number } | null; target: CtxTarget | null };
   decouples: { label: string; path: string; target: CtxTarget }[];
   decoupleView: DecoupleView | null;
+  hover: { x: number; y: number; text: string } | null;
   init: () => void;
   setStep: (n: number) => void;
   nextStep: () => void;
@@ -33,6 +34,8 @@ type FlowState = {
   decoupleByPath: (target: DecoupleTarget, path: string, label?: string) => void;
   clearLastDecouple: () => void;
   resetDecouples: () => void;
+  setHover: (pos: { x: number; y: number }, text: string) => void;
+  clearHover: () => void;
 };
 
 export const useFlowStore = create<FlowState>((set, get) => ({
@@ -46,13 +49,33 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   ctxMenu: { open: false, pos: null, target: null },
   decouples: [],
   decoupleView: null,
+  hover: null,
 
   init: () => {
-    const events = sampleEvents;
-    const graph = buildGraph(events);
-    const layout = computeLayout(graph, [START_NODE_ID]);
-    const m = maxDepth(graph);
-    set({ events, graph, layout, eventsLoaded: true, maxStep: m, step: 0 });
+    (async () => {
+      try {
+        if (typeof window !== 'undefined' && 'fetch' in window) {
+          const [gRes, eRes] = await Promise.allSettled([
+            fetch('/data/permit.small.graph.json'),
+            fetch('/data/permit.small.events.json'),
+          ]);
+          if (gRes.status === 'fulfilled' && gRes.value.ok && eRes.status === 'fulfilled' && eRes.value.ok) {
+            const graph = (await gRes.value.json()) as Graph;
+            const events = (await eRes.value.json()) as EventLogEvent[];
+            const layout = computeLayout(graph, [START_NODE_ID]);
+            const m = maxDepth(graph);
+            set({ events, graph, layout, eventsLoaded: true, maxStep: m, step: 0 });
+            return;
+          }
+        }
+      } catch {}
+      // Fallback to bundled sample
+      const events = sampleEvents;
+      const graph = buildGraph(events);
+      const layout = computeLayout(graph, [START_NODE_ID]);
+      const m = maxDepth(graph);
+      set({ events, graph, layout, eventsLoaded: true, maxStep: m, step: 0 });
+    })();
   },
 
   setStep: (n) => set({ step: n }),
@@ -113,4 +136,6 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     set({ decouples: next, decoupleView: view });
   },
   resetDecouples: () => set({ decouples: [], decoupleView: null }),
+  setHover: (pos, text) => set({ hover: { ...pos, text } }),
+  clearHover: () => set({ hover: null }),
 }));

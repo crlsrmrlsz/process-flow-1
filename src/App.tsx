@@ -2,6 +2,7 @@ import { ControlsPanel } from '@/components/ControlsPanel';
 import { DetailsPanel } from '@/components/DetailsPanel';
 import { FlowCanvas } from '@/components/FlowCanvas';
 import { ContextMenu } from '@/components/ContextMenu';
+import { EdgeTooltip } from '@/components/EdgeTooltip';
 import { useFlowStore } from '@/state/store';
 import { useEffect } from 'react';
 
@@ -26,6 +27,7 @@ export default function App() {
       </aside>
       {/* Portal-based context menu mounts once at app root */}
       <ContextMenu />
+      <EdgeTooltip />
     </div>
   );
 }
