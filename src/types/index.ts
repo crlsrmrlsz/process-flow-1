@@ -2,7 +2,16 @@ export type EventLogEvent = {
   caseId: string;
   activity: string;
   timestamp: string; // ISO string
-  resource?: string;
+  resource?: string; // person/worker id
+  department?: string; // department name
+  attrs?: {
+    amountDue?: number;
+    amountPaid?: number;
+    docsCount?: number;
+    docQuality?: 'low' | 'ok' | 'high';
+    channel?: 'online' | 'in-person';
+    priority?: 'normal' | 'priority';
+  };
 };
 
 export type Traversal = {
@@ -26,6 +35,14 @@ export type GraphEdge = {
   target: NodeId;
   count: number;
   traversals: Traversal[];
+  // Derived stats (milliseconds)
+  meanMs?: number;
+  medianMs?: number;
+  p90Ms?: number;
+  minMs?: number;
+  maxMs?: number;
+  uniqueResources?: number;
+  uniqueDepartments?: number;
 };
 
 export type Graph = {
@@ -36,4 +53,3 @@ export type Graph = {
 };
 
 export type LayoutPositions = Record<NodeId, { x: number; y: number }>;
-

@@ -1,4 +1,5 @@
 import { EventLogEvent, Graph, GraphEdge, GraphNode, Traversal } from '@/types';
+import { summarizeDurationsMs } from '@/lib/stats';
 
 export const START_NODE_ID = 'START';
 
@@ -23,7 +24,12 @@ export function buildGraph(events: EventLogEvent[]): Graph {
   // add START node synthetic
   nodeSet.add(START_NODE_ID);
 
-  const addEdge = (source: string, target: string, traversal?: Traversal) => {
+  const addEdge = (
+    source: string,
+    target: string,
+    traversal?: Traversal,
+    sourceEvent?: EventLogEvent,
+  ) => {
     const id = `${source}__${target}`;
     let e = edgesMap.get(id);
     if (!e) {
@@ -36,6 +42,13 @@ export function buildGraph(events: EventLogEvent[]): Graph {
     reverse[target] = reverse[target] || [];
     if (!adjacency[source].includes(target)) adjacency[source].push(target);
     if (!reverse[target].includes(source)) reverse[target].push(source);
+
+    // Track unique resource/department on the edge (stored temporarily as private sets)
+    const er = e as any;
+    if (!er._resSet) er._resSet = new Set<string>();
+    if (!er._depSet) er._depSet = new Set<string>();
+    if (sourceEvent?.resource) er._resSet.add(sourceEvent.resource);
+    if (sourceEvent?.department) er._depSet.add(sourceEvent.department);
   };
 
   for (const [caseId, list] of Object.entries(byCase)) {
@@ -48,7 +61,7 @@ export function buildGraph(events: EventLogEvent[]): Graph {
       startTs: first.timestamp,
       endTs: first.timestamp,
       durationMs: 0,
-    });
+    }, first);
 
     for (let i = 0; i < list.length - 1; i++) {
       const a = list[i];
@@ -62,12 +75,28 @@ export function buildGraph(events: EventLogEvent[]): Graph {
         durationMs:
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       };
-      addEdge(a.activity, b.activity, t);
+      addEdge(a.activity, b.activity, t, a);
     }
   }
 
   const nodes: GraphNode[] = Array.from(nodeSet).map((id) => ({ id, label: id }));
-  const edges: GraphEdge[] = Array.from(edgesMap.values());
+  const edges: GraphEdge[] = Array.from(edgesMap.values()).map((e) => {
+    const durations = e.traversals.map((t) => t.durationMs);
+    const { mean, median, min, max, p90 } = summarizeDurationsMs(durations);
+    const er = e as any;
+    const uniqueResources = er._resSet ? (er._resSet as Set<string>).size : 0;
+    const uniqueDepartments = er._depSet ? (er._depSet as Set<string>).size : 0;
+    return {
+      ...e,
+      meanMs: mean,
+      medianMs: median,
+      p90Ms: p90,
+      minMs: min,
+      maxMs: max,
+      uniqueResources,
+      uniqueDepartments,
+    } as GraphEdge;
+  });
 
   return { nodes, edges, adjacency, reverse };
 }
@@ -94,4 +123,3 @@ export function bfsLayers(
   }
   return dist;
 }
-
