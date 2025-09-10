@@ -4,7 +4,8 @@ import { buildGraph, START_NODE_ID } from '@/lib/graph';
 import { computeLayout } from '@/lib/layout';
 import { computeVisible, maxDepth } from '@/lib/step';
 import type { EventLogEvent, Graph } from '@/types';
-import { decoupleByDepartmentDownstream, decoupleByPathDownstream, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
+import { decoupleByDepartmentDownstream, decoupleByPathDownstream, decoupleCompositeDownstream, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
+import { selectorFromPath } from '@/lib/attr';
 
 type Selection = { type: 'node' | 'edge'; id: string } | null;
 type CtxTarget = { type: 'node' | 'edge'; id: string };
@@ -18,7 +19,8 @@ type FlowState = {
   maxStep: number;
   selection: Selection;
   ctxMenu: { open: boolean; pos: { x: number; y: number } | null; target: CtxTarget | null };
-  decouple: { label: string; path: string; target: CtxTarget; view: DecoupleView } | null;
+  decouples: { label: string; path: string; target: CtxTarget }[];
+  decoupleView: DecoupleView | null;
   init: () => void;
   setStep: (n: number) => void;
   nextStep: () => void;
@@ -29,7 +31,8 @@ type FlowState = {
   closeCtxMenu: () => void;
   decoupleByDepartment: (target: DecoupleTarget) => void;
   decoupleByPath: (target: DecoupleTarget, path: string, label?: string) => void;
-  clearDecouple: () => void;
+  clearLastDecouple: () => void;
+  resetDecouples: () => void;
 };
 
 export const useFlowStore = create<FlowState>((set, get) => ({
@@ -41,7 +44,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   maxStep: 0,
   selection: null,
   ctxMenu: { open: false, pos: null, target: null },
-  decouple: null,
+  decouples: [],
+  decoupleView: null,
 
   init: () => {
     const events = sampleEvents;
@@ -76,14 +80,37 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   decoupleByDepartment: (target) => {
     const { graph, events } = get();
     if (!graph) return;
-    const view = decoupleByDepartmentDownstream(graph, events, target);
-    set({ decouple: { label: 'Department', path: 'department', target, view } });
+    const next = [...get().decouples, { label: 'Department', path: 'department', target }];
+    const view = decoupleCompositeDownstream(
+      graph,
+      events,
+      next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
+    );
+    set({ decouples: next, decoupleView: view });
   },
   decoupleByPath: (target, path, label) => {
     const { graph, events } = get();
     if (!graph) return;
-    const view = decoupleByPathDownstream(graph, events, target, path);
-    set({ decouple: { label: label ?? path, path, target, view } });
+    const next = [...get().decouples, { label: label ?? path, path, target }];
+    const view = decoupleCompositeDownstream(
+      graph,
+      events,
+      next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
+    );
+    set({ decouples: next, decoupleView: view });
   },
-  clearDecouple: () => set({ decouple: null }),
+  clearLastDecouple: () => {
+    const { decouples, graph, events } = get();
+    if (!graph) return;
+    const next = decouples.slice(0, -1);
+    const view = next.length
+      ? decoupleCompositeDownstream(
+          graph,
+          events,
+          next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
+        )
+      : null;
+    set({ decouples: next, decoupleView: view });
+  },
+  resetDecouples: () => set({ decouples: [], decoupleView: null }),
 }));

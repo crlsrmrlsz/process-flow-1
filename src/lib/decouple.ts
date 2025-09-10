@@ -124,3 +124,87 @@ export function decoupleDownstreamBySelector(
 
   return { groupEdges, replacedEdgeIds: replaced };
 }
+
+export type DecoupleLayer = { target: DecoupleTarget; selector: (e: EventLogEvent) => string | undefined; label: string };
+
+// Composite downstream decouple: apply ordered layers; groupKey becomes a joined label:value chain.
+export function decoupleCompositeDownstream(
+  graph: Graph,
+  events: EventLogEvent[],
+  layers: DecoupleLayer[],
+): DecoupleView {
+  const cases = byCase(events);
+  const groups = new Map<string, Map<string, DecoupledEdge>>();
+  const replaced = new Set<string>();
+
+  const pushEdge = (groupKey: string, source: string, target: string, durationMs: number, caseId: string, res?: string, dep?: string) => {
+    const idBase = `${source}__${target}`;
+    replaced.add(idBase);
+    let bucket = groups.get(groupKey);
+    if (!bucket) {
+      bucket = new Map<string, DecoupledEdge>();
+      groups.set(groupKey, bucket);
+    }
+    const id = `${groupKey}|${idBase}`;
+    let e = bucket.get(id);
+    if (!e) {
+      e = { id, source, target, count: 0, traversals: [], groupKey } as DecoupledEdge;
+      bucket.set(id, e);
+    }
+    e.count++;
+    e.traversals.push({ caseId, startTs: '', endTs: '', durationMs, resource: res, department: dep });
+  };
+
+  for (const [caseId, arr] of cases) {
+    if (arr.length < 2) continue;
+    // For each layer, find pivot index and compute value when pivot is encountered downstream in order
+    const layerStates: { idx: number; value?: string }[] = layers.map(() => ({ idx: -1 }));
+
+    // Precompute for node targets – edge targets handled while walking
+    for (let li = 0; li < layers.length; li++) {
+      const L = layers[li];
+      if (L.target.type === 'node') {
+        const startIdx = li === 0 ? 0 : Math.max(0, layerStates[li - 1].idx);
+        for (let i = startIdx; i < arr.length; i++) {
+          if (arr[i].activity === L.target.id) {
+            layerStates[li].idx = i;
+            layerStates[li].value = L.selector(arr[i]) || 'Unknown';
+            break;
+          }
+        }
+      }
+    }
+
+    // Walk edges; update edge-target pivots on the fly and emit with current groupKey parts
+    for (let i = 0; i < arr.length - 1; i++) {
+      const a = arr[i], b = arr[i + 1];
+      // Edge-target layers update when we step across matching edge
+      for (let li = 0; li < layers.length; li++) {
+        const L = layers[li];
+        if (L.target.type === 'edge') {
+          const [src, tgt] = L.target.id.split('__');
+          if (a.activity === src && b.activity === tgt && (li === 0 || layerStates[li - 1].idx <= i)) {
+            layerStates[li].idx = i + 1; // after this edge
+            layerStates[li].value = L.selector(a) || 'Unknown';
+          }
+        }
+      }
+      const dur = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      // Build groupKey from all layers that have taken effect up to this point (idx set and <= i)
+      const parts: string[] = [];
+      for (let li = 0; li < layers.length; li++) {
+        const st = layerStates[li];
+        if (st.idx >= 0 && st.idx <= i) {
+          parts.push(`${layers[li].label}: ${st.value ?? 'Unknown'}`);
+        }
+      }
+      if (parts.length > 0) {
+        pushEdge(parts.join(' | '), a.activity, b.activity, dur, caseId, a.resource, a.department);
+      }
+    }
+  }
+
+  const groupEdges: DecoupledEdge[] = [];
+  for (const bucket of groups.values()) groupEdges.push(...bucket.values());
+  return { groupEdges, replacedEdgeIds: replaced };
+}

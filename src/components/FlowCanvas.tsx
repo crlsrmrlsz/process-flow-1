@@ -28,7 +28,7 @@ function CanvasInner() {
   const { fitView } = useReactFlow();
   const setNodePosition = useFlowStore((s) => s.setNodePosition);
   const openCtxMenu = useFlowStore((s) => s.openCtxMenu);
-  const decouple = useFlowStore((s) => s.decouple);
+  const decoupleView = useFlowStore((s) => s.decoupleView);
 
   const { nodes, edges } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[] };
@@ -71,10 +71,10 @@ function CanvasInner() {
       }));
 
     // Overlay decoupled edges (department) replacing base edges downstream
-    if (decouple) {
-      const replaced = decouple.view.replacedEdgeIds;
+    if (decoupleView) {
+      const replaced = decoupleView.replacedEdgeIds;
       baseEdges = baseEdges.filter((e) => !replaced.has(e.id));
-      const decoupledEdges: Edge[] = decouple.view.groupEdges
+      const decoupledEdges: Edge[] = decoupleView.groupEdges
         .filter((ge) => visibleEdges.has(`${ge.source}__${ge.target}`))
         .map((ge) => ({
           id: ge.id,
@@ -91,7 +91,7 @@ function CanvasInner() {
     }
     const edges = baseEdges;
     return { nodes, edges };
-  }, [graph, layout, getVisible, step, selection, decouple]);
+  }, [graph, layout, getVisible, step, selection, decoupleView]);
 
   const onNodeClick = useCallback((_: unknown, n: Node) => setSelection({ type: 'node', id: n.id }), [setSelection]);
   const onEdgeClick = useCallback((_: unknown, e: Edge) => setSelection({ type: 'edge', id: e.id }), [setSelection]);

@@ -10,13 +10,16 @@ type MenuItem = {
 };
 
 export function ContextMenu() {
-  const { ctxMenu, graph, events, closeCtxMenu, decoupleByDepartment, decoupleByPath } = useFlowStore((s) => ({
+  const { ctxMenu, graph, events, decouples, closeCtxMenu, decoupleByDepartment, decoupleByPath, clearLastDecouple, resetDecouples } = useFlowStore((s) => ({
     ctxMenu: s.ctxMenu,
     graph: s.graph,
     events: s.events,
+    decouples: s.decouples,
     closeCtxMenu: s.closeCtxMenu,
     decoupleByDepartment: s.decoupleByDepartment,
     decoupleByPath: s.decoupleByPath,
+    clearLastDecouple: s.clearLastDecouple,
+    resetDecouples: s.resetDecouples,
   }));
 
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -80,7 +83,7 @@ export function ContextMenu() {
       canShowCases = graph.edges.some((e) => e.source === t.id || e.target === t.id);
     }
 
-    return [
+    const baseItems: MenuItem[] = [
       { key: 'dept', label: 'Decouple by Department', enabled: canDecoupleDept },
       { key: 'person', label: 'Decouple by Person', enabled: canDecouplePerson },
       { key: 'channel', label: 'Decouple by Channel', enabled: canDecoupleChannel },
@@ -90,7 +93,13 @@ export function ContextMenu() {
       { key: 'expand', label: 'Expand', enabled: canExpand },
       { key: 'cases', label: 'Show cases here', enabled: canShowCases },
     ];
-  }, [ctxMenu.open, ctxMenu.target, graph]);
+    const layerItems: MenuItem[] = [];
+    if (decouples.length) {
+      layerItems.push({ key: 'clearLast', label: 'Clear last decouple', enabled: true });
+      layerItems.push({ key: 'resetAll', label: 'Reset decouples', enabled: true });
+    }
+    return [...baseItems, ...layerItems];
+  }, [ctxMenu.open, ctxMenu.target, graph, decouples.length, events]);
 
   useEffect(() => {
     if (!ctxMenu.open) return;
@@ -149,6 +158,8 @@ export function ContextMenu() {
             if (it.key === 'channel') decoupleByPath(ctxMenu.target, 'attributes.channel', 'Channel');
             if (it.key === 'priority') decoupleByPath(ctxMenu.target, 'attributes.priority', 'Priority');
             if (it.key === 'docQuality') decoupleByPath(ctxMenu.target, 'attributes.docQuality', 'Doc Quality');
+            if (it.key === 'clearLast') clearLastDecouple();
+            if (it.key === 'resetAll') resetDecouples();
             // Other actions wired in later milestones
             closeCtxMenu();
           }}
