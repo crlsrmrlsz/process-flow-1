@@ -18,7 +18,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
 ## Quick Summary
 - Minimal web app to explore a process graph step‑by‑step with an inspectable details panel.
 - Tech: Vite + React + TypeScript, React Flow (built‑in edges), Tailwind, Zustand, Vitest, Playwright.
-- Data: spec‑driven synthetic event log for Restaurant Operating Permit process (v4). Primary storage: JSONL.GZ events, with precomputed `graph.json` for fast load.
+- Data: spec‑driven synthetic event log for Restaurant Operating Permit process. Primary storage: JSONL.GZ events, with precomputed `graph.json` for fast load.
 - Interactions: right‑click context menu; decouple by attribute with downstream propagation; layered decouples (e.g., Department → Person). Edge hover tooltip shows mean/p90 duration.
 
 ## Common Bash Commands
