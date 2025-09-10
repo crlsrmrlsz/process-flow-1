@@ -63,7 +63,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Simple BFS layering for deterministic positions.
 - `src/data/sampleEvents.ts`
   - Synthetic dataset (~30 events) across ~6 activities.
-- `docs/permit_process_spec.v4.json`
+- `docs/permit_process_spec.json`
   - Declarative spec for Restaurant Operating Permit process (states, transitions, resources, durations, capacities).
 - `scripts/generate_from_spec.mjs`
   - Spec‑driven generator that emits JSONL(.gz) events.

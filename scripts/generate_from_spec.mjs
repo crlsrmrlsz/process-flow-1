@@ -6,7 +6,7 @@ import { pipeline } from 'node:stream';
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { spec: 'docs/permit_process_spec.v4.json', size: 'small', out: 'data/permit.small.events' };
+  const opts = { spec: 'docs/permit_process_spec.json', size: 'small', out: 'data/permit.small.events' };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--spec') opts.spec = args[++i];
@@ -66,7 +66,7 @@ function resolveResource(state, ctx) {
 function nowISO(ts) { return new Date(ts).toISOString(); }
 
 function buildVariantPaths() {
-  // From docs/permit_process_definition_v4.md variants
+  // From docs/permit_process_definition.md variants
   return {
     happy_path: [
       'APP_SUBMIT','INITIAL_REVIEW','REQ_CHECK','HEALTH_INSPECTION','CARD_REQUEST','CARD_PRODUCTION','QUALITY_CHECK','NOTIFY_APPLICANT','PERMIT_DELIVERY'
