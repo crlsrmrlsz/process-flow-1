@@ -1,4 +1,5 @@
-import type { EventLogEvent, Graph, GraphEdge, NodeId } from '@/types';
+import type { EventLogEvent, Graph, GraphEdge } from '@/types';
+import { selectorFromPath } from '@/lib/attr';
 
 export type GroupKey = string; // department or resource value
 
@@ -22,19 +23,28 @@ function byCase(events: EventLogEvent[]): Map<string, EventLogEvent[]> {
   return m;
 }
 
-export function decoupleByDepartmentDownstream(
-  graph: Graph,
-  events: EventLogEvent[],
-  target: DecoupleTarget,
-): DecoupleView {
-  return decoupleDownstream(graph, events, target, 'department');
+export function decoupleByDepartmentDownstream(graph: Graph, events: EventLogEvent[], target: DecoupleTarget): DecoupleView {
+  return decoupleDownstreamBySelector(graph, events, target, (e) => e.department || 'Unknown');
 }
 
-export function decoupleDownstream(
+export function decoupleByResourceDownstream(graph: Graph, events: EventLogEvent[], target: DecoupleTarget): DecoupleView {
+  return decoupleDownstreamBySelector(graph, events, target, (e) => e.resource || 'Unknown');
+}
+
+export function decoupleByPathDownstream(
   graph: Graph,
   events: EventLogEvent[],
   target: DecoupleTarget,
-  dim: 'department' | 'resource',
+  path: string,
+): DecoupleView {
+  return decoupleDownstreamBySelector(graph, events, target, selectorFromPath(path));
+}
+
+export function decoupleDownstreamBySelector(
+  graph: Graph,
+  events: EventLogEvent[],
+  target: DecoupleTarget,
+  selector: (e: EventLogEvent) => string | undefined,
 ): DecoupleView {
   const cases = byCase(events);
   const groups = new Map<GroupKey, Map<string, DecoupledEdge>>();
@@ -68,7 +78,7 @@ export function decoupleDownstream(
     if (target.type === 'node') {
       const idx = arr.findIndex((ev) => ev.activity === target.id);
       if (idx < 0) continue;
-      const groupKey = (arr[idx] as any)[dim] || 'Unknown';
+      const groupKey = selector(arr[idx]) || 'Unknown';
       for (let i = idx; i < arr.length - 1; i++) {
         const a = arr[i];
         const b = arr[i + 1];
@@ -80,7 +90,7 @@ export function decoupleDownstream(
       for (let i = 0; i < arr.length - 1; i++) {
         const a = arr[i], b = arr[i + 1];
         if (a.activity === edgeSrc && b.activity === edgeTgt) {
-          const groupKey = (a as any)[dim] || 'Unknown';
+          const groupKey = selector(a) || 'Unknown';
           for (let j = i; j < arr.length - 1; j++) {
             const x = arr[j], y = arr[j + 1];
             const dur = new Date(y.timestamp).getTime() - new Date(x.timestamp).getTime();
@@ -114,4 +124,3 @@ export function decoupleDownstream(
 
   return { groupEdges, replacedEdgeIds: replaced };
 }
-

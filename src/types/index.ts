@@ -4,14 +4,18 @@ export type EventLogEvent = {
   timestamp: string; // ISO string
   resource?: string; // person/worker id
   department?: string; // department name
-  attrs?: {
+  // Prefer `attributes`, keep `attrs` for backward compatibility.
+  attributes?: {
     amountDue?: number;
     amountPaid?: number;
     docsCount?: number;
-    docQuality?: 'low' | 'ok' | 'high';
+    docQuality?: 'low' | 'medium' | 'high';
     channel?: 'online' | 'in-person';
     priority?: 'normal' | 'priority';
+    notes?: string;
   };
+  // legacy alias
+  attrs?: EventLogEvent['attributes'];
 };
 
 export type Traversal = {

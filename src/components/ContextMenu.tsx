@@ -10,12 +10,13 @@ type MenuItem = {
 };
 
 export function ContextMenu() {
-  const { ctxMenu, graph, events, closeCtxMenu, decoupleByDepartment } = useFlowStore((s) => ({
+  const { ctxMenu, graph, events, closeCtxMenu, decoupleByDepartment, decoupleByPath } = useFlowStore((s) => ({
     ctxMenu: s.ctxMenu,
     graph: s.graph,
     events: s.events,
     closeCtxMenu: s.closeCtxMenu,
     decoupleByDepartment: s.decoupleByDepartment,
+    decoupleByPath: s.decoupleByPath,
   }));
 
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -30,6 +31,9 @@ export function ContextMenu() {
 
     let canDecoupleDept = false;
     let canDecouplePerson = false;
+    let canDecoupleChannel = false;
+    let canDecouplePriority = false;
+    let canDecoupleDocQuality = false;
     let canCollapse = false;
     let canExpand = false; // reserved for collapsed meta-nodes in future milestones
     let canShowCases = false;
@@ -52,15 +56,25 @@ export function ContextMenu() {
       const outs = outgoing(t.id);
       const depSet = new Set<string>();
       const resSet = new Set<string>();
+      const chanSet = new Set<string>();
+      const priSet = new Set<string>();
+      const dqSet = new Set<string>();
       // Use the events to detect real distinct departments/resources handling this node
       for (const ev of events) {
         if (ev.activity === t.id) {
           if (ev.department) depSet.add(ev.department);
           if (ev.resource) resSet.add(ev.resource);
+          const attrs = ev.attributes ?? ev.attrs;
+          if (attrs?.channel) chanSet.add(attrs.channel);
+          if (attrs?.priority) priSet.add(attrs.priority);
+          if (attrs?.docQuality) dqSet.add(attrs.docQuality);
         }
       }
       canDecoupleDept = depSet.size >= 2;
       canDecouplePerson = resSet.size >= 2;
+      canDecoupleChannel = chanSet.size >= 2;
+      canDecouplePriority = priSet.size >= 2;
+      canDecoupleDocQuality = dqSet.size >= 2;
       canCollapse = outs.length > 0;
       // Show cases here if node has any incident edges
       canShowCases = graph.edges.some((e) => e.source === t.id || e.target === t.id);
@@ -69,6 +83,9 @@ export function ContextMenu() {
     return [
       { key: 'dept', label: 'Decouple by Department', enabled: canDecoupleDept },
       { key: 'person', label: 'Decouple by Person', enabled: canDecouplePerson },
+      { key: 'channel', label: 'Decouple by Channel', enabled: canDecoupleChannel },
+      { key: 'priority', label: 'Decouple by Priority', enabled: canDecouplePriority },
+      { key: 'docQuality', label: 'Decouple by Doc Quality', enabled: canDecoupleDocQuality },
       { key: 'collapse', label: 'Collapse Following Transitions', enabled: t.type === 'node' && canCollapse },
       { key: 'expand', label: 'Expand', enabled: canExpand },
       { key: 'cases', label: 'Show cases here', enabled: canShowCases },
@@ -127,9 +144,11 @@ export function ContextMenu() {
           }`}
           onClick={() => {
             if (!it.enabled || !ctxMenu.target) return;
-            if (it.key === 'dept') {
-              decoupleByDepartment(ctxMenu.target);
-            }
+            if (it.key === 'dept') decoupleByDepartment(ctxMenu.target);
+            if (it.key === 'person') decoupleByPath(ctxMenu.target, 'resource', 'Person');
+            if (it.key === 'channel') decoupleByPath(ctxMenu.target, 'attributes.channel', 'Channel');
+            if (it.key === 'priority') decoupleByPath(ctxMenu.target, 'attributes.priority', 'Priority');
+            if (it.key === 'docQuality') decoupleByPath(ctxMenu.target, 'attributes.docQuality', 'Doc Quality');
             // Other actions wired in later milestones
             closeCtxMenu();
           }}

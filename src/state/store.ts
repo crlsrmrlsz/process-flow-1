@@ -4,7 +4,7 @@ import { buildGraph, START_NODE_ID } from '@/lib/graph';
 import { computeLayout } from '@/lib/layout';
 import { computeVisible, maxDepth } from '@/lib/step';
 import type { EventLogEvent, Graph } from '@/types';
-import { decoupleByDepartmentDownstream, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
+import { decoupleByDepartmentDownstream, decoupleByPathDownstream, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
 
 type Selection = { type: 'node' | 'edge'; id: string } | null;
 type CtxTarget = { type: 'node' | 'edge'; id: string };
@@ -18,7 +18,7 @@ type FlowState = {
   maxStep: number;
   selection: Selection;
   ctxMenu: { open: boolean; pos: { x: number; y: number } | null; target: CtxTarget | null };
-  decouple: { dim: 'department'; target: CtxTarget; view: DecoupleView } | null;
+  decouple: { label: string; path: string; target: CtxTarget; view: DecoupleView } | null;
   init: () => void;
   setStep: (n: number) => void;
   nextStep: () => void;
@@ -28,6 +28,7 @@ type FlowState = {
   openCtxMenu: (target: CtxTarget, pos: { x: number; y: number }) => void;
   closeCtxMenu: () => void;
   decoupleByDepartment: (target: DecoupleTarget) => void;
+  decoupleByPath: (target: DecoupleTarget, path: string, label?: string) => void;
   clearDecouple: () => void;
 };
 
@@ -76,7 +77,13 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     const { graph, events } = get();
     if (!graph) return;
     const view = decoupleByDepartmentDownstream(graph, events, target);
-    set({ decouple: { dim: 'department', target, view } });
+    set({ decouple: { label: 'Department', path: 'department', target, view } });
+  },
+  decoupleByPath: (target, path, label) => {
+    const { graph, events } = get();
+    if (!graph) return;
+    const view = decoupleByPathDownstream(graph, events, target, path);
+    set({ decouple: { label: label ?? path, path, target, view } });
   },
   clearDecouple: () => set({ decouple: null }),
 }));
