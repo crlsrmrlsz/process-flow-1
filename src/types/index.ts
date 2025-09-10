@@ -19,6 +19,8 @@ export type Traversal = {
   startTs: string;
   endTs: string;
   durationMs: number;
+  resource?: string;
+  department?: string;
 };
 
 export type NodeId = string;

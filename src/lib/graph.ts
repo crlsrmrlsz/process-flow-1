@@ -74,6 +74,8 @@ export function buildGraph(events: EventLogEvent[]): Graph {
         endTs: b.timestamp,
         durationMs:
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        resource: a.resource,
+        department: a.department,
       };
       addEdge(a.activity, b.activity, t, a);
     }

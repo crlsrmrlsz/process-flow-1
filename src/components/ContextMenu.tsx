@@ -10,10 +10,11 @@ type MenuItem = {
 };
 
 export function ContextMenu() {
-  const { ctxMenu, graph, closeCtxMenu } = useFlowStore((s) => ({
+  const { ctxMenu, graph, closeCtxMenu, decoupleByDepartment } = useFlowStore((s) => ({
     ctxMenu: s.ctxMenu,
     graph: s.graph,
     closeCtxMenu: s.closeCtxMenu,
+    decoupleByDepartment: s.decoupleByDepartment,
   }));
 
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -124,8 +125,11 @@ export function ContextMenu() {
               : 'text-zinc-500 cursor-not-allowed'
           }`}
           onClick={() => {
-            if (!it.enabled) return;
-            // not wiring actions in Milestone 3
+            if (!it.enabled || !ctxMenu.target) return;
+            if (it.key === 'dept') {
+              decoupleByDepartment(ctxMenu.target);
+            }
+            // Other actions wired in later milestones
             closeCtxMenu();
           }}
         >
@@ -137,4 +141,3 @@ export function ContextMenu() {
 
   return createPortal(menu, document.body);
 }
-

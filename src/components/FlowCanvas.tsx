@@ -28,6 +28,7 @@ function CanvasInner() {
   const { fitView } = useReactFlow();
   const setNodePosition = useFlowStore((s) => s.setNodePosition);
   const openCtxMenu = useFlowStore((s) => s.openCtxMenu);
+  const decouple = useFlowStore((s) => s.decouple);
 
   const { nodes, edges } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[] };
@@ -54,7 +55,8 @@ function CanvasInner() {
       const v = Math.log(count) / Math.log(globalMax); // 0..1
       return minW + v * (maxW - minW);
     };
-    const edges: Edge[] = graph.edges
+    // Build base edges
+    let baseEdges: Edge[] = graph.edges
       .filter((e) => visibleEdges.has(e.id))
       .map((e) => ({
         id: e.id,
@@ -67,8 +69,29 @@ function CanvasInner() {
         selectable: true,
         interactionWidth: 24,
       }));
+
+    // Overlay decoupled edges (department) replacing base edges downstream
+    if (decouple) {
+      const replaced = decouple.view.replacedEdgeIds;
+      baseEdges = baseEdges.filter((e) => !replaced.has(e.id));
+      const decoupledEdges: Edge[] = decouple.view.groupEdges
+        .filter((ge) => visibleEdges.has(`${ge.source}__${ge.target}`))
+        .map((ge) => ({
+          id: ge.id,
+          source: ge.source,
+          target: ge.target,
+          type: 'default',
+          label: String(ge.count) + ` (${ge.groupKey})`,
+          style: { stroke: '#9ca3af', strokeWidth: widthFor(ge.count) },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
+          selectable: true,
+          interactionWidth: 24,
+        }));
+      return { nodes, edges: [...baseEdges, ...decoupledEdges] };
+    }
+    const edges = baseEdges;
     return { nodes, edges };
-  }, [graph, layout, getVisible, step, selection]);
+  }, [graph, layout, getVisible, step, selection, decouple]);
 
   const onNodeClick = useCallback((_: unknown, n: Node) => setSelection({ type: 'node', id: n.id }), [setSelection]);
   const onEdgeClick = useCallback((_: unknown, e: Edge) => setSelection({ type: 'edge', id: e.id }), [setSelection]);
