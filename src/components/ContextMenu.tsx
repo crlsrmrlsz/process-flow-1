@@ -10,9 +10,10 @@ type MenuItem = {
 };
 
 export function ContextMenu() {
-  const { ctxMenu, graph, closeCtxMenu, decoupleByDepartment } = useFlowStore((s) => ({
+  const { ctxMenu, graph, events, closeCtxMenu, decoupleByDepartment } = useFlowStore((s) => ({
     ctxMenu: s.ctxMenu,
     graph: s.graph,
+    events: s.events,
     closeCtxMenu: s.closeCtxMenu,
     decoupleByDepartment: s.decoupleByDepartment,
   }));
@@ -36,29 +37,29 @@ export function ContextMenu() {
     if (t.type === 'edge') {
       const e = edgeById(t.id);
       if (e) {
-        canDecoupleDept = (e.uniqueDepartments ?? 0) >= 2;
-        canDecouplePerson = (e.uniqueResources ?? 0) >= 2;
+        // Use traversals to count distinct departments/resources, if available
+        const deptSet = new Set<string>();
+        const resSet = new Set<string>();
+        for (const tr of e.traversals) {
+          if ((tr as any).department) deptSet.add((tr as any).department as string);
+          if ((tr as any).resource) resSet.add((tr as any).resource as string);
+        }
+        canDecoupleDept = deptSet.size >= 2 || (e.uniqueDepartments ?? 0) >= 2;
+        canDecouplePerson = resSet.size >= 2 || (e.uniqueResources ?? 0) >= 2;
         canShowCases = e.count > 0;
       }
     } else if (t.type === 'node') {
       const outs = outgoing(t.id);
       const depSet = new Set<string>();
       const resSet = new Set<string>();
-      for (const e of outs) {
-        // fallback to traversals if uniques absent
-        if (e.uniqueDepartments != null || e.uniqueResources != null) {
-          if (e.uniqueDepartments && e.uniqueDepartments > 0) depSet.add('present');
-          if (e.uniqueResources && e.uniqueResources > 0) resSet.add('present');
-        } else {
-          for (const tr of e.traversals) {
-            // no department on traversal; rely on edge uniques in Phase 1 data
-          }
+      // Use the events to detect real distinct departments/resources handling this node
+      for (const ev of events) {
+        if (ev.activity === t.id) {
+          if (ev.department) depSet.add(ev.department);
+          if (ev.resource) resSet.add(ev.resource);
         }
       }
-      // enable if sum across outs implies at least 2 unique categories overall
-      canDecoupleDept = depSet.size >= 2; // conservatively false in Phase 1 sample
-      // For person, detect by checking whether multiple edges report any resource presence.
-      // Phase 1 sample likely has multiple resources across outs from 'A'.
+      canDecoupleDept = depSet.size >= 2;
       canDecouplePerson = resSet.size >= 2;
       canCollapse = outs.length > 0;
       // Show cases here if node has any incident edges
