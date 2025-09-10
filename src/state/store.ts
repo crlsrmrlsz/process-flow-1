@@ -6,6 +6,7 @@ import { computeVisible, maxDepth } from '@/lib/step';
 import type { Graph } from '@/types';
 
 type Selection = { type: 'node' | 'edge'; id: string } | null;
+type CtxTarget = { type: 'node' | 'edge'; id: string };
 
 type FlowState = {
   eventsLoaded: boolean;
@@ -14,12 +15,15 @@ type FlowState = {
   step: number;
   maxStep: number;
   selection: Selection;
+  ctxMenu: { open: boolean; pos: { x: number; y: number } | null; target: CtxTarget | null };
   init: () => void;
   setStep: (n: number) => void;
   nextStep: () => void;
   setSelection: (sel: Selection) => void;
   setNodePosition: (id: string, pos: { x: number; y: number }) => void;
   getVisible: () => { visibleEdges: Set<string>; visibleNodes: Set<string> };
+  openCtxMenu: (target: CtxTarget, pos: { x: number; y: number }) => void;
+  closeCtxMenu: () => void;
 };
 
 export const useFlowStore = create<FlowState>((set, get) => ({
@@ -29,6 +33,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   step: 0,
   maxStep: 0,
   selection: null,
+  ctxMenu: { open: false, pos: null, target: null },
 
   init: () => {
     const graph = buildGraph(sampleEvents);
@@ -52,5 +57,11 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     const { graph, step } = get();
     if (!graph) return { visibleEdges: new Set(), visibleNodes: new Set() };
     return computeVisible(graph, { step });
+  },
+  openCtxMenu: (target, pos) => {
+    set({ ctxMenu: { open: true, pos, target } });
+  },
+  closeCtxMenu: () => {
+    set({ ctxMenu: { open: false, pos: null, target: null } });
   },
 }));
