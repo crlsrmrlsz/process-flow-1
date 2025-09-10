@@ -1,6 +1,7 @@
 import { ControlsPanel } from '@/components/ControlsPanel';
 import { DetailsPanel } from '@/components/DetailsPanel';
 import { FlowCanvas } from '@/components/FlowCanvas';
+import { ContextMenu } from '@/components/ContextMenu';
 import { useFlowStore } from '@/state/store';
 import { useEffect } from 'react';
 
@@ -23,7 +24,8 @@ export default function App() {
       <aside className="pane col-span-3 lg:col-span-2 rounded-md p-3">
         <DetailsPanel />
       </aside>
+      {/* Portal-based context menu mounts once at app root */}
+      <ContextMenu />
     </div>
   );
 }
-

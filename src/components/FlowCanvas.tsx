@@ -27,6 +27,7 @@ function CanvasInner() {
   const step = useFlowStore((s) => s.step);
   const { fitView } = useReactFlow();
   const setNodePosition = useFlowStore((s) => s.setNodePosition);
+  const openCtxMenu = useFlowStore((s) => s.openCtxMenu);
 
   const { nodes, edges } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[] };
@@ -79,6 +80,16 @@ function CanvasInner() {
     });
   }, [setNodePosition]);
 
+  const onNodeContextMenu = useCallback((e: React.MouseEvent, n: Node) => {
+    e.preventDefault();
+    openCtxMenu({ type: 'node', id: n.id }, { x: e.clientX, y: e.clientY });
+  }, [openCtxMenu]);
+
+  const onEdgeContextMenu = useCallback((e: React.MouseEvent, ed: Edge) => {
+    e.preventDefault();
+    openCtxMenu({ type: 'edge', id: ed.id }, { x: e.clientX, y: e.clientY });
+  }, [openCtxMenu]);
+
   const selectedEdgeId = selection?.type === 'edge' ? selection.id : undefined;
   const selectedNodeId = selection?.type === 'node' ? selection.id : undefined;
 
@@ -116,6 +127,8 @@ function CanvasInner() {
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onNodesChange={onNodesChange}
+        onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
         proOptions={{ hideAttribution: true }}
       >
         <Controls />
