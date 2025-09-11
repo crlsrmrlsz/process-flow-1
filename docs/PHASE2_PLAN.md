@@ -1,5 +1,18 @@
 # Phase 2 Plan — Process Flow Explorer
 
+## Progress Snapshot (current)
+- Data pipeline: START-enabled precompute and event normalization implemented. Precompute now adds `START → firstActivity` and normalized events (`caseId`, `attributes.channel`). The app store normalizes precomputed datasets and rebuilds the graph from events when `START` is missing.
+- Decoupling overlays: Implemented for Department, Person, Channel, Priority, and Doc Quality with composite layering. Duplicate layer adds are prevented to avoid repeated labels.
+- Undo/Reset controls: Context menu shows “Undo decouple by …” and “Reset decouples downstream” at the decouple origin and downstream nodes; actions only affect that downstream region. Global “Clear last” and “Reset decouples” remain.
+- Hover tooltips: Edge tooltip displays mean and p90 duration (live).
+- Utilities and tests: `visible.ts` (expanded-nodes visibility) exists with unit tests; new unit tests cover downstream undo/reset; Playwright E2E includes screenshots for decouple → undo → reset flows.
+
+Pending (next up in Phase 2)
+- Contextual reveal from selected nodes (expanded roots), stubs/terminal markers, and “Expand All”.
+- Cases panel driven by context menu “Show cases here”; remove left-click details updates per spec.
+- Top coverage controls: trace mining + “Top X% coverage” reveal in left pane.
+- Collapse/expand subflows into meta-nodes with aggregated stats.
+- Optional duration-based styling default (color ramp) while keeping BFS layout.
 ## A. Summary & Scope
 Phase 2 demonstrates how a Process Flow Explorer adds decision-making value on a realistic public-sector Permit Application process. We will load a richer synthetic event log that captures real-world variants (payment issues, documentation churn, staff reassignment, escalations, SLA breaches, outcomes). Users can incrementally reveal the flow from START, then steer the reveal by selecting newly exposed states. They can right‑click to decouple transitions by department/person, collapse subflows into meta-nodes, and open a cases table for any state/edge. Global controls let users reveal the full flow or filter to the top X% of complete paths.
 
@@ -261,6 +274,7 @@ Actions (high-level):
   - Cases table renders expected rows given a known target.
 - E2E (Playwright):
   - Flow: decouple (dept) → collapse from node → show cases (edge) → top X% slider filters graph; assert counts/labels update and panel shows cases.
+  - Added (current): Screenshot E2E covering decouple → undo decouple → reset decouples downstream.
 
 ### Dependencies
 - No new libraries required. Implement quantiles in `stats.ts`. Keep React Flow built‑in edges. Use existing Zustand/Tailwind. Optional: tiny `floating-ui` for menu positioning (only if custom positioning becomes complex), but default plan avoids it.
@@ -466,6 +480,7 @@ State diagram (manual expansion):
 - Right‑click on a state (or a pertinent edge) to open menu:
   - Decouple by Department
   - Decouple by Person
+  - Status (implemented): Context menu toggles to “Undo decouple by …” at the original decouple node and all downstream nodes; also includes “Reset decouples downstream”.
 - Effect (propagating scope): split outgoing transitions into grouped edges per chosen dimension and propagate that grouping downstream to terminals. From the decouple origin onward, each department/person sees a full, separate path until terminal (upstream remains aggregated). Each group shows its own counts/durations along the entire downstream path.
 - Visual decoupling cue: nodes/edges that are eligible show a small “stacked” dot badge.
 
