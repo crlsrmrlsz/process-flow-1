@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { sampleEvents } from '@/data/sampleEvents';
-import { buildGraph, START_NODE_ID } from '@/lib/graph';
+import { buildGraph, START_NODE_ID, bfsLayers } from '@/lib/graph';
 import { computeLayout } from '@/lib/layout';
 import { computeVisible, maxDepth } from '@/lib/step';
 import type { EventLogEvent, Graph } from '@/types';
@@ -34,6 +34,8 @@ type FlowState = {
   decoupleByPath: (target: DecoupleTarget, path: string, label?: string) => void;
   clearLastDecouple: () => void;
   resetDecouples: () => void;
+  resetDecouplesDownstream: (nodeId: string) => void;
+  undoDecoupleByPathDownstream: (nodeId: string, path: string) => void;
   setHover: (pos: { x: number; y: number }, text: string) => void;
   clearHover: () => void;
 };
@@ -186,6 +188,44 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     set({ decouples: next, decoupleView: view });
   },
   resetDecouples: () => set({ decouples: [], decoupleView: null }),
+  resetDecouplesDownstream: (nodeId) => {
+    const { graph, events, decouples } = get();
+    if (!graph || decouples.length === 0) return;
+    const dist = bfsLayers(graph, [nodeId]);
+    const isDown = (t: CtxTarget) => {
+      if (t.type === 'node') return dist[t.id] != null;
+      const [src] = t.id.split('__');
+      return dist[src] != null;
+    };
+    const next = decouples.filter((l) => !isDown(l.target));
+    const view = next.length
+      ? decoupleCompositeDownstream(
+          graph,
+          events,
+          next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
+        )
+      : null;
+    set({ decouples: next, decoupleView: view });
+  },
+  undoDecoupleByPathDownstream: (nodeId, path) => {
+    const { graph, events, decouples } = get();
+    if (!graph || decouples.length === 0) return;
+    const dist = bfsLayers(graph, [nodeId]);
+    const isDown = (t: CtxTarget) => {
+      if (t.type === 'node') return dist[t.id] != null;
+      const [src] = t.id.split('__');
+      return dist[src] != null;
+    };
+    const next = decouples.filter((l) => !(l.path === path && isDown(l.target)));
+    const view = next.length
+      ? decoupleCompositeDownstream(
+          graph,
+          events,
+          next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
+        )
+      : null;
+    set({ decouples: next, decoupleView: view });
+  },
   setHover: (pos, text) => set({ hover: { ...pos, text } }),
   clearHover: () => set({ hover: null }),
 }));

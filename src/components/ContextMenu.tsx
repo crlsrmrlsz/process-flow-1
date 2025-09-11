@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useFlowStore } from '@/state/store';
+import { bfsLayers } from '@/lib/graph';
 
 type MenuItem = {
   key: string;
@@ -10,7 +11,7 @@ type MenuItem = {
 };
 
 export function ContextMenu() {
-  const { ctxMenu, graph, events, decouples, closeCtxMenu, decoupleByDepartment, decoupleByPath, clearLastDecouple, resetDecouples } = useFlowStore((s) => ({
+  const { ctxMenu, graph, events, decouples, closeCtxMenu, decoupleByDepartment, decoupleByPath, clearLastDecouple, resetDecouples, resetDecouplesDownstream, undoDecoupleByPathDownstream } = useFlowStore((s) => ({
     ctxMenu: s.ctxMenu,
     graph: s.graph,
     events: s.events,
@@ -20,6 +21,8 @@ export function ContextMenu() {
     decoupleByPath: s.decoupleByPath,
     clearLastDecouple: s.clearLastDecouple,
     resetDecouples: s.resetDecouples,
+    resetDecouplesDownstream: s.resetDecouplesDownstream,
+    undoDecoupleByPathDownstream: s.undoDecoupleByPathDownstream,
   }));
 
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -31,6 +34,32 @@ export function ContextMenu() {
     // Helpers
     const outgoing = (nodeId: string) => graph.edges.filter((e) => e.source === nodeId);
     const edgeById = (id: string) => graph.edges.find((e) => e.id === id);
+    const distFrom = (nodeId: string) => bfsLayers(graph, [nodeId]);
+    const hasDownstreamLayers = (nodeId: string) => {
+      const dist = distFrom(nodeId);
+      const isDown = (tar: { type: 'node' | 'edge'; id: string }) => {
+        if (tar.type === 'node') return dist[tar.id] != null;
+        const [src] = tar.id.split('__');
+        return dist[src] != null;
+      };
+      return decouples.some((l) => isDown(l.target));
+    };
+    const conceptPath = {
+      dept: 'department',
+      person: 'resource',
+      channel: 'attributes.channel',
+      priority: 'attributes.priority',
+      docQuality: 'attributes.docQuality',
+    } as const;
+    const hasConceptDownstream = (nodeId: string, path: string) => {
+      const dist = distFrom(nodeId);
+      const isDown = (tar: { type: 'node' | 'edge'; id: string }) => {
+        if (tar.type === 'node') return dist[tar.id] != null;
+        const [src] = tar.id.split('__');
+        return dist[src] != null;
+      };
+      return decouples.some((l) => l.path === path && isDown(l.target));
+    };
 
     let canDecoupleDept = false;
     let canDecouplePerson = false;
@@ -83,16 +112,36 @@ export function ContextMenu() {
       canShowCases = graph.edges.some((e) => e.source === t.id || e.target === t.id);
     }
 
-    const baseItems: MenuItem[] = [
-      { key: 'dept', label: 'Decouple by Department', enabled: canDecoupleDept },
-      { key: 'person', label: 'Decouple by Person', enabled: canDecouplePerson },
-      { key: 'channel', label: 'Decouple by Channel', enabled: canDecoupleChannel },
-      { key: 'priority', label: 'Decouple by Priority', enabled: canDecouplePriority },
-      { key: 'docQuality', label: 'Decouple by Doc Quality', enabled: canDecoupleDocQuality },
-      { key: 'collapse', label: 'Collapse Following Transitions', enabled: t.type === 'node' && canCollapse },
-      { key: 'expand', label: 'Expand', enabled: canExpand },
-      { key: 'cases', label: 'Show cases here', enabled: canShowCases },
-    ];
+    const baseItems: MenuItem[] = [];
+    // Per-concept decouple or undo (node target only for downstream operations)
+    const canDownOps = t.type === 'node';
+    const pushConcept = (key: keyof typeof conceptPath, label: string, canDecouple: boolean) => {
+      if (!canDownOps) {
+        baseItems.push({ key, label: `Decouple by ${label}`, enabled: canDecouple });
+        return;
+      }
+      const path = conceptPath[key];
+      const hasDown = hasConceptDownstream(t.id, path);
+      if (hasDown) {
+        baseItems.push({ key: `undo:${key}`, label: `Undo decouple by ${label}`, enabled: true });
+      } else {
+        baseItems.push({ key, label: `Decouple by ${label}`, enabled: canDecouple });
+      }
+    };
+    pushConcept('dept', 'Department', canDecoupleDept);
+    pushConcept('person', 'Person', canDecouplePerson);
+    pushConcept('channel', 'Channel', canDecoupleChannel);
+    pushConcept('priority', 'Priority', canDecouplePriority);
+    pushConcept('docQuality', 'Doc Quality', canDecoupleDocQuality);
+    baseItems.push({ key: 'collapse', label: 'Collapse Following Transitions', enabled: t.type === 'node' && canCollapse });
+    baseItems.push({ key: 'expand', label: 'Expand', enabled: canExpand });
+    baseItems.push({ key: 'cases', label: 'Show cases here', enabled: canShowCases });
+
+    // Downstream reset (node only)
+    if (t.type === 'node') {
+      const hasAnyDown = hasDownstreamLayers(t.id);
+      if (hasAnyDown) baseItems.push({ key: 'resetDownstream', label: 'Reset decouples downstream', enabled: true });
+    }
     const layerItems: MenuItem[] = [];
     if (decouples.length) {
       layerItems.push({ key: 'clearLast', label: 'Clear last decouple', enabled: true });
@@ -158,6 +207,12 @@ export function ContextMenu() {
             if (it.key === 'channel') decoupleByPath(ctxMenu.target, 'attributes.channel', 'Channel');
             if (it.key === 'priority') decoupleByPath(ctxMenu.target, 'attributes.priority', 'Priority');
             if (it.key === 'docQuality') decoupleByPath(ctxMenu.target, 'attributes.docQuality', 'Doc Quality');
+            if (it.key === 'undo:dept' && ctxMenu.target.type === 'node') undoDecoupleByPathDownstream(ctxMenu.target.id, 'department');
+            if (it.key === 'undo:person' && ctxMenu.target.type === 'node') undoDecoupleByPathDownstream(ctxMenu.target.id, 'resource');
+            if (it.key === 'undo:channel' && ctxMenu.target.type === 'node') undoDecoupleByPathDownstream(ctxMenu.target.id, 'attributes.channel');
+            if (it.key === 'undo:priority' && ctxMenu.target.type === 'node') undoDecoupleByPathDownstream(ctxMenu.target.id, 'attributes.priority');
+            if (it.key === 'undo:docQuality' && ctxMenu.target.type === 'node') undoDecoupleByPathDownstream(ctxMenu.target.id, 'attributes.docQuality');
+            if (it.key === 'resetDownstream' && ctxMenu.target.type === 'node') resetDecouplesDownstream(ctxMenu.target.id);
             if (it.key === 'clearLast') clearLastDecouple();
             if (it.key === 'resetAll') resetDecouples();
             // Other actions wired in later milestones
