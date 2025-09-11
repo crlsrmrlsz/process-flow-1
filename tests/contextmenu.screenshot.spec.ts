@@ -2,11 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('context menu visible and decouple by department enabled on Submit Application', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('[data-testid^="node-" ]', { timeout: 30000 });
-
-  // Expand first node so more appear
-  const firstAny = page.locator('[data-testid^="node-"]').first();
-  await firstAny.click();
+  await page.waitForSelector('g.react-flow__edge', { timeout: 30000 });
 
   // Open context menu on Submit Application if present; otherwise first node
   const targetNode = page.locator('[data-testid^="node-"]').nth(1);

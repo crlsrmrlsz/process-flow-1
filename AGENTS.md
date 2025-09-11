@@ -8,12 +8,12 @@ This file guides coding agents working in this repo. It explains how to run, tes
 - Data: In‑memory synthetic events at `src/data/sampleEvents.ts`.
 - Graph build: `src/lib/graph.ts` (`buildGraph`, `START_NODE_ID`). Nodes = activities + synthetic START. Edges = START → first activity per case + consecutive same‑case transitions; each edge has `count` and `traversals { caseId, startTs, endTs, durationMs }`.
 - Layout: `src/lib/layout.ts` (`computeLayout`) does simple BFS layering from START.
-- Reveal: `src/lib/visible.ts` (`computeVisibleFromExpanded`) computes visibility from expanded nodes; START always visible.
+- Reveal: `src/lib/visible.ts` (`computeVisibleFromExpanded`) computes visibility from expanded nodes; START auto‑expands on load.
 - State: `src/state/store.ts` (Zustand) — `graph`, `layout`, `expanded`, `selection`, `getVisible()`, `setNodePosition()`; `init()` wires sample/precomputed data + layout.
 - UI: `src/components/FlowCanvas.tsx` (built‑in edges, auto‑fit, Background); `ProcessNode.tsx` (keyboard a11y + hidden handles); `ContextMenu.tsx` (decouple/undo/reset downstream, expand/collapse, reset expansion); `EdgeTooltip.tsx`.
 - Tests: Unit in `src/lib/*.spec.ts`; E2E in `tests/*.spec.ts` (dev server auto‑started by Playwright config).
 - Commands: `npm install`; dev `npm run dev`; unit `npm run test`; E2E `npx playwright install chromium` then `npm run test:e2e`; lint/format `npm run lint` / `npm run format`.
-- Gotchas: Reveal always from START (no contextual reveal); built‑in edges only; ensure dark‑theme edge readability; auto‑fit uses `setTimeout(0)` after element updates.
+- Gotchas: Built‑in edges only; ensure dark‑theme edge readability; auto‑fit uses `setTimeout(0)` after element updates.
 
 - Minimal web app to explore a process graph by clicking nodes to reveal transitions.
 - Tech: Vite + React + TypeScript, React Flow (built‑in edges), Tailwind, Zustand, Vitest, Playwright.
@@ -37,9 +37,9 @@ This file guides coding agents working in this repo. It explains how to run, tes
 - `src/components/FlowCanvas.tsx`
   - React Flow canvas wrapped in `ReactFlowProvider`.
   - Uses built‑in `type: 'default'` edges with label and arrow marker for reliability.
-  - Auto‑fits on step changes (`fitView({ padding: 0.2 })`).
+  - Auto‑fits on element changes (`fitView({ padding: 0.2 })`).
   - Nodes set `sourcePosition: Right`, `targetPosition: Left`.
-  - Includes `Controls` and a `Background` grid; right‑click opens context menu; hover shows edge tooltip.
+  - Includes a `Background` grid; right‑click opens context menu; hover shows edge tooltip.
   - Edge width scales subtly with count (log‑scaled) for readability on dark theme.
 - `src/components/ProcessNode.tsx`
   - Custom node with keyboard a11y. Includes invisible left/right `Handle`s to ensure edge anchoring.
@@ -67,7 +67,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Precomputes `public/data/permit.small.graph.json` and `public/data/permit.small.events.json` from JSONL for fast UI.
 - Tests
   - `src/lib/*.spec.ts`: unit tests for pure utils.
-  - `tests/e2e.spec.ts`: Playwright smoke (edges computed + DOM edges exist + details update).
+  - `tests/*.spec.ts`: Playwright smoke (edges computed + DOM edges exist) and screenshot flows.
 
 ## Code Style Guidelines
 - TypeScript strict mode; avoid `any` unless necessary.
@@ -107,7 +107,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
 - Editor: VS Code recommended, with ESLint and Tailwind IntelliSense.
 
 ## Unexpected Behaviors / Warnings
-- Step 0 shows no edges by design; use step ≥ 1 to reveal transitions.
+- On load, START auto‑expands to show initial transitions; click nodes to reveal more.
 - Edge visibility: using built‑in edges avoids layering issues seen with some custom edge implementations.
 - Auto‑fit relies on a `setTimeout(0)` after nodes/edges update so React Flow can recalc internals before fitting.
 - Precomputed files in `public/data` are preferred when present. For other datasets, ensure server serves JSON (avoid `.gz` without `Content-Encoding: gzip`).

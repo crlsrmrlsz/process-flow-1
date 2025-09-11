@@ -113,7 +113,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
               const events = normalizeEvents(eventsRaw);
               const graph = needsStartRebuild(graphPre) ? buildGraph(events) : graphPre;
               const layout = computeLayout(graph, [START_NODE_ID]);
-              set({ events, graph, layout, eventsLoaded: true, expanded: new Set() });
+              set({ events, graph, layout, eventsLoaded: true, expanded: new Set([START_NODE_ID]) });
               return;
             }
           } finally {
@@ -125,7 +125,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       const events = sampleEvents;
       const graph = buildGraph(events);
       const layout = computeLayout(graph, [START_NODE_ID]);
-      set({ events, graph, layout, eventsLoaded: true, expanded: new Set() });
+      set({ events, graph, layout, eventsLoaded: true, expanded: new Set([START_NODE_ID]) });
     })();
   },
   expandNode: (id) => set((state) => ({ expanded: new Set<string>([...state.expanded, id]) })),

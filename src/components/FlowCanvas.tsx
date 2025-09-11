@@ -23,6 +23,7 @@ function CanvasInner() {
   const layout = useFlowStore((s) => s.layout);
   const getVisible = useFlowStore((s) => s.getVisible);
   const selection = useFlowStore((s) => s.selection);
+  const expanded = useFlowStore((s) => s.expanded);
   const setSelection = useFlowStore((s) => s.setSelection);
   const expandNode = useFlowStore((s) => s.expandNode);
   const { fitView } = useReactFlow();
@@ -93,7 +94,7 @@ function CanvasInner() {
     }
     const edges = baseEdges;
     return { nodes, edges };
-  }, [graph, layout, getVisible, step, selection, decoupleView]);
+  }, [graph, layout, getVisible, expanded, selection, decoupleView]);
 
   const onNodeClick = useCallback((_: unknown, n: Node) => { expandNode(n.id); setSelection({ type: 'node', id: n.id }); }, [expandNode, setSelection]);
   const onEdgeClick = useCallback((_: unknown, e: Edge) => setSelection({ type: 'edge', id: e.id }), [setSelection]);
