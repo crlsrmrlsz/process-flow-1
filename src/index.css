@@ -23,3 +23,9 @@ html, body, #root {
 .react-flow__edge:hover .react-flow__edge-path {
   stroke: #cbd5e1 !important; /* zinc-300 */
 }
+
+/* Selected edge emphasis */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #e5e7eb !important; /* zinc-200 */
+  stroke-width: 3 !important;
+}

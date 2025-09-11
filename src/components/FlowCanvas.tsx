@@ -49,14 +49,38 @@ function CanvasInner() {
         targetPosition: Position.Left,
         // keep nodes non-animated to reduce noise
       }));
+    // Edge width based on throughput (log-scaled)
     const globalMax = Math.max(1, ...graph.edges.map((e) => e.count));
-    const minW = 0.3; // thinnest possible while still visible
-    const maxW = 3.0; // upper bound for very high counts
+    const minW = 1.0; // more readable on dark
+    const maxW = 4.0;
     const widthFor = (count: number) => {
       if (globalMax <= 1) return minW;
       const v = Math.log(count) / Math.log(globalMax); // 0..1
       return minW + v * (maxW - minW);
     };
+
+    // Edge color based on mean duration (blue → orange). Stable across whole graph.
+    const durationValues = graph.edges.map((e) => e.meanMs || 0).filter((n) => n > 0);
+    const dMin = durationValues.length ? Math.min(...durationValues) : 0;
+    const dMax = durationValues.length ? Math.max(...durationValues) : 1;
+    const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+    const hex = (n: number) => n.toString(16).padStart(2, '0');
+    const rgb = (r: number, g: number, b: number) => `#${hex(Math.round(r))}${hex(Math.round(g))}${hex(Math.round(b))}`;
+    const colorFor = (mean?: number) => {
+      if (!mean || dMax <= dMin) return '#9ca3af'; // zinc-400 fallback
+      const t = clamp01((mean - dMin) / (dMax - dMin));
+      // From blue-400 (96,165,250) to amber-500 (245,158,11)
+      const r = lerp(96, 245, t);
+      const g = lerp(165, 158, t);
+      const b = lerp(250, 11, t);
+      return rgb(r, g, b);
+    };
+    const edgeLabel = (text: string) => (
+      <div className="px-1.5 py-[1px] rounded bg-zinc-800/85 border border-zinc-600 text-[11px] text-zinc-100 shadow-sm max-w-[200px] truncate">
+        {text}
+      </div>
+    );
     // Build base edges
     let baseEdges: Edge[] = graph.edges
       .filter((e) => visibleEdges.has(e.id))
@@ -65,9 +89,9 @@ function CanvasInner() {
         source: e.source,
         target: e.target,
         type: 'default',
-        label: String(e.count),
-        style: { stroke: '#9ca3af', strokeWidth: widthFor(e.count) },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
+        label: edgeLabel(String(e.count)),
+        style: { stroke: colorFor(e.meanMs), strokeWidth: widthFor(e.count) },
+        markerEnd: { type: MarkerType.ArrowClosed, color: colorFor(e.meanMs) },
         selectable: true,
         interactionWidth: 24,
       }));
@@ -83,9 +107,9 @@ function CanvasInner() {
           source: ge.source,
           target: ge.target,
           type: 'default',
-          label: String(ge.count) + ` (${ge.groupKey})`,
-          style: { stroke: '#9ca3af', strokeWidth: widthFor(ge.count) },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
+          label: edgeLabel(`${String(ge.count)} (${ge.groupKey})`),
+          style: { stroke: colorFor((ge as any).meanMs), strokeWidth: widthFor(ge.count) },
+          markerEnd: { type: MarkerType.ArrowClosed, color: colorFor((ge as any).meanMs) },
           selectable: true,
           interactionWidth: 24,
         }));
@@ -199,7 +223,7 @@ function CanvasInner() {
         proOptions={{ hideAttribution: true }}
       >
         <Controls />
-        <Background color="#444" gap={24} />
+        <Background color="#3f3f46" gap={28} />
       </ReactFlow>
     </div>
   );
