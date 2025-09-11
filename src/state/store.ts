@@ -4,7 +4,7 @@ import { buildGraph, START_NODE_ID } from '@/lib/graph';
 import { computeLayout } from '@/lib/layout';
 import { computeVisible, maxDepth } from '@/lib/step';
 import type { EventLogEvent, Graph } from '@/types';
-import { decoupleByDepartmentDownstream, decoupleByPathDownstream, decoupleCompositeDownstream, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
+import { decoupleCompositeDownstream, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
 import { selectorFromPath } from '@/lib/attr';
 
 type Selection = { type: 'node' | 'edge'; id: string } | null;
@@ -53,6 +53,50 @@ export const useFlowStore = create<FlowState>((set, get) => ({
 
   init: () => {
     (async () => {
+      function activityDepartment(act: string | undefined): string | undefined {
+        if (!act) return undefined;
+        // Coarse mapping for demo datasets generated from spec
+        if (act.startsWith('APP_SUBMIT') || act.startsWith('INITIAL_REVIEW')) return 'Intake';
+        if (act.startsWith('REQ_CHECK')) return 'Requirements';
+        if (act.startsWith('HEALTH_INSPECTION')) return 'Health';
+        if (act.startsWith('MANAGER_APPROVAL')) return 'Management';
+        if (act.startsWith('CARD_REQUEST') || act.startsWith('QUALITY_CHECK') || act.startsWith('NOTIFY_APPLICANT')) return 'System';
+        if (act.startsWith('CARD_PRODUCTION')) return 'Production';
+        if (act.startsWith('PERMIT_DELIVERY')) return 'Logistics';
+        if (act.startsWith('INFO_REQUEST')) return 'System';
+        if (act.startsWith('APPLICANT_RESPONSE')) return 'Applicant';
+        if (act.startsWith('REJECTED')) return 'Decision';
+        return undefined;
+      }
+
+      function normalizeEvents(raw: any[]): EventLogEvent[] {
+        if (!Array.isArray(raw)) return [];
+        // If already in correct shape (caseId present), pass through
+        if (raw.length && 'caseId' in raw[0]) return raw as EventLogEvent[];
+        return raw.map((e: any) => {
+          const channelRaw: string | undefined = e.application_type;
+          const channel = channelRaw === 'in_person' ? 'in-person' : channelRaw;
+          const attributes = channel ? { channel } : undefined;
+          const department = e.department ?? activityDepartment(e.activity);
+          return {
+            caseId: e.case_id ?? e.caseId,
+            activity: e.activity,
+            timestamp: e.timestamp,
+            resource: e.resource,
+            department,
+            attributes,
+            attrs: attributes,
+          } as EventLogEvent;
+        });
+      }
+
+      function needsStartRebuild(g: Graph | null | undefined): boolean {
+        if (!g) return true;
+        const hasStartNode = g.nodes.some((n) => n.id === START_NODE_ID);
+        const hasStartOut = Array.isArray((g as any).adjacency?.[START_NODE_ID]) && (g as any).adjacency[START_NODE_ID].length > 0;
+        return !hasStartNode || !hasStartOut;
+      }
+
       try {
         if (typeof window !== 'undefined' && 'fetch' in window) {
           const [gRes, eRes] = await Promise.allSettled([
@@ -60,8 +104,10 @@ export const useFlowStore = create<FlowState>((set, get) => ({
             fetch('/data/permit.small.events.json'),
           ]);
           if (gRes.status === 'fulfilled' && gRes.value.ok && eRes.status === 'fulfilled' && eRes.value.ok) {
-            const graph = (await gRes.value.json()) as Graph;
-            const events = (await eRes.value.json()) as EventLogEvent[];
+            const graphPre = (await gRes.value.json()) as Graph;
+            const eventsRaw = (await eRes.value.json()) as any[];
+            const events = normalizeEvents(eventsRaw);
+            const graph = needsStartRebuild(graphPre) ? buildGraph(events) : graphPre;
             const layout = computeLayout(graph, [START_NODE_ID]);
             const m = maxDepth(graph);
             set({ events, graph, layout, eventsLoaded: true, maxStep: m, step: 0 });

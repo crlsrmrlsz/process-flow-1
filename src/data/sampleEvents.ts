@@ -22,7 +22,7 @@ export const sampleEvents: EventLogEvent[] = [
   { caseId: 'P2', activity: 'Intake Review', timestamp: t(20), resource: 'u-intake-3', department: 'Intake' },
   { caseId: 'P2', activity: 'Docs Check', timestamp: t(28), resource: 'u-intake-3', department: 'Intake', attrs: { docsCount: 2, docQuality: 'low' } },
   { caseId: 'P2', activity: 'Request More Docs', timestamp: t(35), resource: 'u-intake-3', department: 'Intake' },
-  { caseId: 'P2', activity: 'Re-Upload Docs', timestamp: t(60), resource: 'applicant', department: 'Intake', attrs: { docsCount: 1, docQuality: 'ok' } },
+  { caseId: 'P2', activity: 'Re-Upload Docs', timestamp: t(60), resource: 'applicant', department: 'Intake', attrs: { docsCount: 1, docQuality: 'medium' } },
   { caseId: 'P2', activity: 'Resubmission Review', timestamp: t(80), resource: 'u-intake-3', department: 'Intake' },
   { caseId: 'P2', activity: 'Request More Docs', timestamp: t(95), resource: 'u-intake-3', department: 'Intake' },
   { caseId: 'P2', activity: 'Re-Upload Docs', timestamp: t(140), resource: 'applicant', department: 'Intake', attrs: { docsCount: 1, docQuality: 'high' } },
@@ -47,4 +47,3 @@ export const sampleEvents: EventLogEvent[] = [
   { caseId: 'P3', activity: 'Appeal Review', timestamp: t(330), resource: 'u-legal-1', department: 'Legal' },
   { caseId: 'P3', activity: 'Approved', timestamp: t(360), resource: 'u-legal-1', department: 'Legal' },
 ];
-
