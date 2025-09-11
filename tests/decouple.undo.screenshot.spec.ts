@@ -2,11 +2,12 @@ import { test, expect } from '@playwright/test';
 
 test('decouple by person → undo → reset downstream (with screenshots)', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('[data-testid^="node-" ]', { timeout: 30000 });
 
-  // Step forward enough so REQ_CHECK is visible (approx depth 3)
-  await page.getByRole('button', { name: 'Next step' }).click();
-  await page.getByRole('button', { name: 'Next step' }).click();
-  await page.getByRole('button', { name: 'Next step' }).click();
+  // Expand a few nodes so edges/nodes are visible
+  const firstAny = page.locator('[data-testid^="node-"]').first();
+  await firstAny.click();
+  await page.locator('[data-testid^="node-"]').nth(1).click();
 
   const reqCheck = page.locator('[data-testid="node-REQ_CHECK"]');
   const exists = await reqCheck.count();

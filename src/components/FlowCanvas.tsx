@@ -24,7 +24,7 @@ function CanvasInner() {
   const getVisible = useFlowStore((s) => s.getVisible);
   const selection = useFlowStore((s) => s.selection);
   const setSelection = useFlowStore((s) => s.setSelection);
-  const step = useFlowStore((s) => s.step);
+  const expandNode = useFlowStore((s) => s.expandNode);
   const { fitView } = useReactFlow();
   const setNodePosition = useFlowStore((s) => s.setNodePosition);
   const openCtxMenu = useFlowStore((s) => s.openCtxMenu);
@@ -95,7 +95,7 @@ function CanvasInner() {
     return { nodes, edges };
   }, [graph, layout, getVisible, step, selection, decoupleView]);
 
-  const onNodeClick = useCallback((_: unknown, n: Node) => setSelection({ type: 'node', id: n.id }), [setSelection]);
+  const onNodeClick = useCallback((_: unknown, n: Node) => { expandNode(n.id); setSelection({ type: 'node', id: n.id }); }, [expandNode, setSelection]);
   const onEdgeClick = useCallback((_: unknown, e: Edge) => setSelection({ type: 'edge', id: e.id }), [setSelection]);
   const onNodesChange: OnNodesChange = useCallback((changes: NodeChange[]) => {
     changes.forEach((ch) => {
@@ -174,7 +174,7 @@ function CanvasInner() {
       } catch {}
     }, 0);
     return () => window.clearTimeout(id);
-  }, [graph, step, fitView]);
+  }, [graph, nodes.length, edges.length, fitView]);
 
   if (!graph) return <div className="h-full w-full" />;
 

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { sampleEvents } from '@/data/sampleEvents';
 import { buildGraph, START_NODE_ID, bfsLayers } from '@/lib/graph';
 import { computeLayout } from '@/lib/layout';
-import { computeVisible, maxDepth } from '@/lib/step';
+import { computeVisibleFromExpanded } from '@/lib/visible';
 import type { EventLogEvent, Graph } from '@/types';
 import { decoupleCompositeDownstream, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
 import { selectorFromPath } from '@/lib/attr';
@@ -15,16 +15,15 @@ type FlowState = {
   events: EventLogEvent[];
   graph: Graph | null;
   layout: Record<string, { x: number; y: number }>;
-  step: number;
-  maxStep: number;
+  expanded: Set<string>;
   selection: Selection;
   ctxMenu: { open: boolean; pos: { x: number; y: number } | null; target: CtxTarget | null };
   decouples: { label: string; path: string; target: CtxTarget }[];
   decoupleView: DecoupleView | null;
   hover: { x: number; y: number; text: string } | null;
   init: () => void;
-  setStep: (n: number) => void;
-  nextStep: () => void;
+  expandNode: (id: string) => void;
+  resetExpanded: () => void;
   setSelection: (sel: Selection) => void;
   setNodePosition: (id: string, pos: { x: number; y: number }) => void;
   getVisible: () => { visibleEdges: Set<string>; visibleNodes: Set<string> };
@@ -45,8 +44,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   events: [],
   graph: null,
   layout: {},
-  step: 0,
-  maxStep: 0,
+  expanded: new Set<string>(),
   selection: null,
   ctxMenu: { open: false, pos: null, target: null },
   decouples: [],
@@ -101,19 +99,24 @@ export const useFlowStore = create<FlowState>((set, get) => ({
 
       try {
         if (typeof window !== 'undefined' && 'fetch' in window) {
-          const [gRes, eRes] = await Promise.allSettled([
-            fetch('/data/permit.small.graph.json'),
-            fetch('/data/permit.small.events.json'),
-          ]);
-          if (gRes.status === 'fulfilled' && gRes.value.ok && eRes.status === 'fulfilled' && eRes.value.ok) {
-            const graphPre = (await gRes.value.json()) as Graph;
-            const eventsRaw = (await eRes.value.json()) as any[];
-            const events = normalizeEvents(eventsRaw);
-            const graph = needsStartRebuild(graphPre) ? buildGraph(events) : graphPre;
-            const layout = computeLayout(graph, [START_NODE_ID]);
-            const m = maxDepth(graph);
-            set({ events, graph, layout, eventsLoaded: true, maxStep: m, step: 0 });
-            return;
+          const controller = new AbortController();
+          const timer = window.setTimeout(() => controller.abort(), 1200);
+          try {
+            const [gRes, eRes] = await Promise.all([
+              fetch('/data/permit.small.graph.json', { signal: controller.signal }).catch(() => null),
+              fetch('/data/permit.small.events.json', { signal: controller.signal }).catch(() => null),
+            ]);
+            if (gRes && gRes.ok && eRes && eRes.ok) {
+              const graphPre = (await gRes.json()) as Graph;
+              const eventsRaw = (await eRes.json()) as any[];
+              const events = normalizeEvents(eventsRaw);
+              const graph = needsStartRebuild(graphPre) ? buildGraph(events) : graphPre;
+              const layout = computeLayout(graph, [START_NODE_ID]);
+              set({ events, graph, layout, eventsLoaded: true, expanded: new Set() });
+              return;
+            }
+          } finally {
+            window.clearTimeout(timer);
           }
         }
       } catch {}
@@ -121,16 +124,11 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       const events = sampleEvents;
       const graph = buildGraph(events);
       const layout = computeLayout(graph, [START_NODE_ID]);
-      const m = maxDepth(graph);
-      set({ events, graph, layout, eventsLoaded: true, maxStep: m, step: 0 });
+      set({ events, graph, layout, eventsLoaded: true, expanded: new Set() });
     })();
   },
-
-  setStep: (n) => set({ step: n }),
-  nextStep: () => {
-    const { step, maxStep } = get();
-    set({ step: Math.min(maxStep, step + 1) });
-  },
+  expandNode: (id) => set((state) => ({ expanded: new Set<string>([...state.expanded, id]) })),
+  resetExpanded: () => set({ expanded: new Set<string>() }),
   setSelection: (sel) => {
     set({ selection: sel });
   },
@@ -138,9 +136,10 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     set((state) => ({ layout: { ...state.layout, [id]: pos } }));
   },
   getVisible: () => {
-    const { graph, step } = get();
+    const { graph, expanded } = get();
     if (!graph) return { visibleEdges: new Set(), visibleNodes: new Set() };
-    return computeVisible(graph, { step });
+    const res = computeVisibleFromExpanded(graph, expanded);
+    return { visibleEdges: res.visibleEdges, visibleNodes: res.visibleNodes };
   },
   openCtxMenu: (target, pos) => {
     set({ ctxMenu: { open: true, pos, target } });

@@ -59,7 +59,6 @@ export function ContextMenu() {
     let canDecoupleDocQuality = false;
     let canCollapse = false;
     let canExpand = false; // reserved for collapsed meta-nodes in future milestones
-    let canShowCases = false;
 
     if (t.type === 'edge') {
       const e = edgeById(t.id);
@@ -73,7 +72,6 @@ export function ContextMenu() {
         }
         canDecoupleDept = deptSet.size >= 2 || (e.uniqueDepartments ?? 0) >= 2;
         canDecouplePerson = resSet.size >= 2 || (e.uniqueResources ?? 0) >= 2;
-        canShowCases = e.count > 0;
       }
     } else if (t.type === 'node') {
       const outs = outgoing(t.id);
@@ -99,8 +97,6 @@ export function ContextMenu() {
       canDecouplePriority = priSet.size >= 2;
       canDecoupleDocQuality = dqSet.size >= 2;
       canCollapse = outs.length > 0;
-      // Show cases here if node has any incident edges
-      canShowCases = graph.edges.some((e) => e.source === t.id || e.target === t.id);
     }
 
     const baseItems: MenuItem[] = [];
@@ -126,7 +122,6 @@ export function ContextMenu() {
     pushConcept('docQuality', 'Doc Quality', canDecoupleDocQuality);
     baseItems.push({ key: 'collapse', label: 'Collapse Following Transitions', enabled: t.type === 'node' && canCollapse });
     baseItems.push({ key: 'expand', label: 'Expand', enabled: canExpand });
-    baseItems.push({ key: 'cases', label: 'Show cases here', enabled: canShowCases });
 
     // Downstream reset (node only)
     if (t.type === 'node') {

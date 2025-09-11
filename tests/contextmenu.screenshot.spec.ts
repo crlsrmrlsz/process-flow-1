@@ -2,13 +2,14 @@ import { test, expect } from '@playwright/test';
 
 test('context menu visible and decouple by department enabled on Submit Application', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('[data-testid^="node-" ]', { timeout: 30000 });
 
-  // Step forward so nodes appear
-  await page.getByRole('button', { name: 'Next step' }).click();
+  // Expand first node so more appear
+  const firstAny = page.locator('[data-testid^="node-"]').first();
+  await firstAny.click();
 
   // Open context menu on Submit Application if present; otherwise first node
-  const submitNode = page.locator('[data-testid="node-Submit Application"]');
-  const targetNode = (await submitNode.count()) > 0 ? submitNode : page.locator('[data-testid^="node-"]').first();
+  const targetNode = page.locator('[data-testid^="node-"]').nth(1);
   await targetNode.click({ button: 'right' });
 
   const menu = page.locator('[data-testid="context-menu"]');
@@ -26,4 +27,3 @@ test('context menu visible and decouple by department enabled on Submit Applicat
     await canvas.screenshot({ path: 'test-results/decouple-dept-canvas.png' });
   }
 });
-
