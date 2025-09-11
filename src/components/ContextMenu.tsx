@@ -34,16 +34,15 @@ export function ContextMenu() {
     // Helpers
     const outgoing = (nodeId: string) => graph.edges.filter((e) => e.source === nodeId);
     const edgeById = (id: string) => graph.edges.find((e) => e.id === id);
+    // Reachability helpers
     const distFrom = (nodeId: string) => bfsLayers(graph, [nodeId]);
-    const hasDownstreamLayers = (nodeId: string) => {
-      const dist = distFrom(nodeId);
-      const isDown = (tar: { type: 'node' | 'edge'; id: string }) => {
-        if (tar.type === 'node') return dist[tar.id] != null;
-        const [src] = tar.id.split('__');
-        return dist[src] != null;
-      };
-      return decouples.some((l) => isDown(l.target));
+    const nodeReachableFromTarget = (layerTarget: { type: 'node' | 'edge'; id: string }, nodeId: string) => {
+      // A layer's effect region starts at its target (node) or at the source of its edge target
+      const origin = layerTarget.type === 'node' ? layerTarget.id : layerTarget.id.split('__')[0];
+      const dist = distFrom(origin);
+      return dist[nodeId] != null;
     };
+    const nodeAffectedByAnyDecouple = (nodeId: string) => decouples.some((l) => nodeReachableFromTarget(l.target, nodeId));
     const conceptPath = {
       dept: 'department',
       person: 'resource',
@@ -51,15 +50,7 @@ export function ContextMenu() {
       priority: 'attributes.priority',
       docQuality: 'attributes.docQuality',
     } as const;
-    const hasConceptDownstream = (nodeId: string, path: string) => {
-      const dist = distFrom(nodeId);
-      const isDown = (tar: { type: 'node' | 'edge'; id: string }) => {
-        if (tar.type === 'node') return dist[tar.id] != null;
-        const [src] = tar.id.split('__');
-        return dist[src] != null;
-      };
-      return decouples.some((l) => l.path === path && isDown(l.target));
-    };
+    const nodeAffectedByConcept = (nodeId: string, path: string) => decouples.some((l) => l.path === path && nodeReachableFromTarget(l.target, nodeId));
 
     let canDecoupleDept = false;
     let canDecouplePerson = false;
@@ -121,7 +112,7 @@ export function ContextMenu() {
         return;
       }
       const path = conceptPath[key];
-      const hasDown = hasConceptDownstream(t.id, path);
+      const hasDown = nodeAffectedByConcept(t.id, path);
       if (hasDown) {
         baseItems.push({ key: `undo:${key}`, label: `Undo decouple by ${label}`, enabled: true });
       } else {
@@ -139,7 +130,7 @@ export function ContextMenu() {
 
     // Downstream reset (node only)
     if (t.type === 'node') {
-      const hasAnyDown = hasDownstreamLayers(t.id);
+      const hasAnyDown = nodeAffectedByAnyDecouple(t.id);
       if (hasAnyDown) baseItems.push({ key: 'resetDownstream', label: 'Reset decouples downstream', enabled: true });
     }
     const layerItems: MenuItem[] = [];
