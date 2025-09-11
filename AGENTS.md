@@ -3,23 +3,22 @@
 This file guides coding agents working in this repo. It explains how to run, test, and extend the app, and highlights conventions and caveats that will save you time.
 
 ## Agent Quickstart
-- Overview: Minimal Process Flow Explorer with stepwise reveal from START, inspectable details, dark 3‑pane UI. Uses built‑in React Flow edges with labels + arrowheads; MiniMap intentionally removed.
+- Overview: Minimal Process Flow Explorer with click‑to‑expand reveal from START and a single central canvas. Uses built‑in React Flow edges with labels + arrowheads; MiniMap intentionally removed.
 - Tech: Vite + React + TypeScript; React Flow (built‑in edges); Zustand; Tailwind; Vitest (unit) + Playwright (E2E). Node 18/20 recommended.
 - Data: In‑memory synthetic events at `src/data/sampleEvents.ts`.
 - Graph build: `src/lib/graph.ts` (`buildGraph`, `START_NODE_ID`). Nodes = activities + synthetic START. Edges = START → first activity per case + consecutive same‑case transitions; each edge has `count` and `traversals { caseId, startTs, endTs, durationMs }`.
 - Layout: `src/lib/layout.ts` (`computeLayout`) does simple BFS layering from START.
-- Reveal: `src/lib/step.ts` (`computeVisible`, `maxDepth`) filters by BFS depth; step 0 shows no edges.
-- State: `src/state/store.ts` (Zustand) — `graph`, `layout`, `step`, `maxStep`, `selection`, `getVisible()`, `setNodePosition()`; `init()` wires sample data + layout.
-- UI: `src/components/FlowCanvas.tsx` (built‑in edges, auto‑fit, Controls + Background), `ProcessNode.tsx` (keyboard a11y + hidden handles), `ControlsPanel.tsx` (slider, Next, legend, transitions count), `DetailsPanel.tsx` (node visits; edge counts + min/avg/max durations).
-- Tests: Unit in `src/lib/*.spec.ts`; E2E in `tests/e2e.spec.ts` (dev server auto‑started by Playwright config).
+- Reveal: `src/lib/visible.ts` (`computeVisibleFromExpanded`) computes visibility from expanded nodes; START always visible.
+- State: `src/state/store.ts` (Zustand) — `graph`, `layout`, `expanded`, `selection`, `getVisible()`, `setNodePosition()`; `init()` wires sample/precomputed data + layout.
+- UI: `src/components/FlowCanvas.tsx` (built‑in edges, auto‑fit, Background); `ProcessNode.tsx` (keyboard a11y + hidden handles); `ContextMenu.tsx` (decouple/undo/reset downstream, expand/collapse, reset expansion); `EdgeTooltip.tsx`.
+- Tests: Unit in `src/lib/*.spec.ts`; E2E in `tests/*.spec.ts` (dev server auto‑started by Playwright config).
 - Commands: `npm install`; dev `npm run dev`; unit `npm run test`; E2E `npx playwright install chromium` then `npm run test:e2e`; lint/format `npm run lint` / `npm run format`.
 - Gotchas: Reveal always from START (no contextual reveal); built‑in edges only; ensure dark‑theme edge readability; auto‑fit uses `setTimeout(0)` after element updates.
 
-## Quick Summary
-- Minimal web app to explore a process graph step‑by‑step with an inspectable details panel.
+- Minimal web app to explore a process graph by clicking nodes to reveal transitions.
 - Tech: Vite + React + TypeScript, React Flow (built‑in edges), Tailwind, Zustand, Vitest, Playwright.
 - Data: spec‑driven synthetic event log for Restaurant Operating Permit process. Primary storage: JSONL.GZ events, with precomputed `graph.json` for fast load.
-- Interactions: right‑click context menu; decouple by attribute with downstream propagation; layered decouples (e.g., Department → Person). Edge hover tooltip shows mean/p90 duration.
+- Interactions: left‑click expands a node; right‑click context menu supports decouple by attribute with downstream propagation (and undo/reset); per‑node collapse; reset expansion. Edge hover tooltip shows mean/p90 duration.
 
 ## Common Bash Commands
 - Install: `npm install`
@@ -44,16 +43,13 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Edge width scales subtly with count (log‑scaled) for readability on dark theme.
 - `src/components/ProcessNode.tsx`
   - Custom node with keyboard a11y. Includes invisible left/right `Handle`s to ensure edge anchoring.
-- `src/components/DetailsPanel.tsx`
-  - Shows node visit summary or edge traversal stats.
-- `src/components/ControlsPanel.tsx`
-  - Step slider, “Next step”, small legend, and a “Transitions visible: N” sanity counter.
+- Removed: `DetailsPanel.tsx` and `ControlsPanel.tsx` in current UI.
 - `src/components/ContextMenu.tsx` / `src/components/EdgeTooltip.tsx`
   - Context menu with decouple actions (Department/Person/Channel/Priority/Doc Quality), clear/reset decouples.
   - Edge tooltip shows mean/p90 duration on hover.
 - `src/state/store.ts`
-  - Zustand store with `graph`, `layout`, `step`, `maxStep`, `selection`, and `getVisible()`.
-  - Reveal always starts from `START` in MVP.
+  - Zustand store with `graph`, `layout`, `expanded`, `selection`, and `getVisible()`.
+  - Reveal always starts from `START` in MVP; left‑click expands nodes.
   - Loads precomputed data when present: `/data/permit.small.graph.json` and `/data/permit.small.events.json` (fallback to bundled sample).
 - `src/lib/graph.ts`
   - Build graph from event log. Adds synthetic `START` node and per‑transition traversals/durations.

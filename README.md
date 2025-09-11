@@ -1,6 +1,6 @@
 # Process Flow Explorer (MVP)
 
-Minimal web app to explore a process graph step-by-step with an inspectable details panel.
+Minimal web app to explore a process graph by expanding nodes directly on the canvas.
 
 ## Stack
 - Vite + React + TypeScript
@@ -24,9 +24,9 @@ npm run test:e2e      # e2e (Playwright)
 Note: Playwright may require `npx playwright install` to download browsers.
 
 ## Project Structure
-- `src/components` – 3‑pane UI, custom node/edge components
-- `src/state` – Zustand store (step, selection, toggles)
-- `src/lib` – pure utilities: event‑log → graph, step filtering, layout
+- `src/components` – Flow canvas and context menu; custom node components
+- `src/state` – Zustand store (graph, layout, expanded nodes, selection, decouples)
+- `src/lib` – pure utilities: event‑log → graph, visibility, layout, stats
 - `src/data/sampleEvents.ts` – hardcoded synthetic event log
 
 ## Data Model
@@ -37,18 +37,18 @@ Event schema:
 We derive a directed graph with a synthetic `START` node, transitions per consecutive same‑case events, and simple traversal durations.
 
 ## MVP Features
-- 3‑pane layout (left controls, center canvas, right details)
-- Stepwise reveal via slider and Next button
-- Optional: continue reveal from selected node
-- Node/edge selection updates right details panel
+- Single central canvas
+- Click any node to expand its outgoing transitions (START is always visible)
 - Built‑in edges with labels + arrowheads; hover emphasis; subtle width scaled by count
+- Context menu on nodes/edges: decouple by Department/Person/Channel/Priority/Doc Quality, undo decouple downstream, reset decouples downstream; expand/collapse (per-node) and reset expansion
 - Keyboard: tab to focus nodes/edges, Enter selects
 
 ## Phase 2 Roadmap Hooks
+- Contextual reveal polish: stubs/terminal markers; expand all
 - Bottleneck coloring/width mapping: plug into edge draw style and node classes
 - Per‑worker split: extend event schema and graph builder to decorate node/edge labels by resource
 - CSV upload/persistence: replace sample data source; keep pure utils for processing
 
 ## Notes
 - Layout is a simple BFS layering; dagre/ELK intentionally omitted for MVP.
-- Utilities are tested; UI has one smoke E2E.
+- Utilities are tested; UI has smoke E2E.

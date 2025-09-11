@@ -11,11 +11,15 @@ type MenuItem = {
 };
 
 export function ContextMenu() {
-  const { ctxMenu, graph, events, decouples, closeCtxMenu, decoupleByDepartment, decoupleByPath, clearLastDecouple, resetDecouples, resetDecouplesDownstream, undoDecoupleByPathDownstream } = useFlowStore((s) => ({
+  const { ctxMenu, graph, events, decouples, expanded, expandNode, collapseNode, resetExpanded, closeCtxMenu, decoupleByDepartment, decoupleByPath, clearLastDecouple, resetDecouples, resetDecouplesDownstream, undoDecoupleByPathDownstream } = useFlowStore((s) => ({
     ctxMenu: s.ctxMenu,
     graph: s.graph,
     events: s.events,
     decouples: s.decouples,
+    expanded: s.expanded,
+    expandNode: s.expandNode,
+    collapseNode: s.collapseNode,
+    resetExpanded: s.resetExpanded,
     closeCtxMenu: s.closeCtxMenu,
     decoupleByDepartment: s.decoupleByDepartment,
     decoupleByPath: s.decoupleByPath,
@@ -96,7 +100,9 @@ export function ContextMenu() {
       canDecoupleChannel = chanSet.size >= 2;
       canDecouplePriority = priSet.size >= 2;
       canDecoupleDocQuality = dqSet.size >= 2;
-      canCollapse = outs.length > 0;
+      const isExpanded = expanded.has(t.id);
+      canCollapse = isExpanded && outs.length > 0;
+      canExpand = !isExpanded;
     }
 
     const baseItems: MenuItem[] = [];
@@ -121,12 +127,13 @@ export function ContextMenu() {
     pushConcept('priority', 'Priority', canDecouplePriority);
     pushConcept('docQuality', 'Doc Quality', canDecoupleDocQuality);
     baseItems.push({ key: 'collapse', label: 'Collapse Following Transitions', enabled: t.type === 'node' && canCollapse });
-    baseItems.push({ key: 'expand', label: 'Expand', enabled: canExpand });
+    baseItems.push({ key: 'expand', label: 'Expand from here', enabled: t.type === 'node' && canExpand });
 
     // Downstream reset (node only)
     if (t.type === 'node') {
       const hasAnyDown = nodeAffectedByAnyDecouple(t.id);
       if (hasAnyDown) baseItems.push({ key: 'resetDownstream', label: 'Reset decouples downstream', enabled: true });
+      if (expanded.size > 0) baseItems.push({ key: 'resetExpansion', label: 'Reset expansion', enabled: true });
     }
     const layerItems: MenuItem[] = [];
     if (decouples.length) {
@@ -199,8 +206,11 @@ export function ContextMenu() {
             if (it.key === 'undo:priority' && ctxMenu.target.type === 'node') undoDecoupleByPathDownstream(ctxMenu.target.id, 'attributes.priority');
             if (it.key === 'undo:docQuality' && ctxMenu.target.type === 'node') undoDecoupleByPathDownstream(ctxMenu.target.id, 'attributes.docQuality');
             if (it.key === 'resetDownstream' && ctxMenu.target.type === 'node') resetDecouplesDownstream(ctxMenu.target.id);
+            if (it.key === 'expand' && ctxMenu.target.type === 'node') expandNode(ctxMenu.target.id);
+            if (it.key === 'collapse' && ctxMenu.target.type === 'node') collapseNode(ctxMenu.target.id);
             if (it.key === 'clearLast') clearLastDecouple();
             if (it.key === 'resetAll') resetDecouples();
+            if (it.key === 'resetExpansion') resetExpanded();
             // Other actions wired in later milestones
             closeCtxMenu();
           }}

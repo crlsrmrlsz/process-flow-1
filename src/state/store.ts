@@ -23,6 +23,7 @@ type FlowState = {
   hover: { x: number; y: number; text: string } | null;
   init: () => void;
   expandNode: (id: string) => void;
+  collapseNode: (id: string) => void;
   resetExpanded: () => void;
   setSelection: (sel: Selection) => void;
   setNodePosition: (id: string, pos: { x: number; y: number }) => void;
@@ -128,6 +129,11 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     })();
   },
   expandNode: (id) => set((state) => ({ expanded: new Set<string>([...state.expanded, id]) })),
+  collapseNode: (id) => set((state) => {
+    const next = new Set(state.expanded);
+    next.delete(id);
+    return { expanded: next };
+  }),
   resetExpanded: () => set({ expanded: new Set<string>() }),
   setSelection: (sel) => {
     set({ selection: sel });
