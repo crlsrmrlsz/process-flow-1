@@ -45,29 +45,10 @@ export function ControlsPanel() {
         <div className="flex items-center gap-2">
           <svg width="64" height="20" aria-hidden>
             <path d="M4,12 C20,4 44,4 60,12" fill="none" stroke="#94a3b8" strokeWidth="2"/>
-            <circle cx="32" cy="8" r="8" fill="rgba(39,39,42,0.85)" />
+            <circle cx="32" cy="8" r="8" fill="rgba(39,39,42,0.8)" />
             <text x="32" y="11" textAnchor="middle" fontSize="9" fill="#e5e7eb">12</text>
           </svg>
           <span>Transition (edge) • count label</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <svg width="64" height="14" aria-hidden>
-            <defs>
-              <linearGradient id="durRamp" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#60a5fa"/>
-                <stop offset="100%" stopColor="#f59e0b"/>
-              </linearGradient>
-            </defs>
-            <rect x="4" y="2" width="56" height="8" rx="4" fill="url(#durRamp)" stroke="#52525b"/>
-          </svg>
-          <span>Edge color: duration (short → long)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <svg width="64" height="16" aria-hidden>
-            <path d="M6,6 L58,6" stroke="#a1a1aa" strokeWidth="1"/>
-            <path d="M6,12 L58,12" stroke="#a1a1aa" strokeWidth="4"/>
-          </svg>
-          <span>Edge width ≈ count (log)</span>
         </div>
         <div className="text-[11px] text-zinc-400">Hover highlights; select to see details →</div>
       </div>
