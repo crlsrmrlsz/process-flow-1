@@ -149,7 +149,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   decoupleByDepartment: (target) => {
     const { graph, events } = get();
     if (!graph) return;
-    const next = [...get().decouples, { label: 'Department', path: 'department', target }];
+    // prevent duplicate layer for same target+path
+    const exists = get().decouples.some((l) => l.target.type === target.type && l.target.id === target.id && l.path === 'department');
+    const next = exists ? get().decouples : [...get().decouples, { label: 'Department', path: 'department', target }];
     const view = decoupleCompositeDownstream(
       graph,
       events,
@@ -160,7 +162,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   decoupleByPath: (target, path, label) => {
     const { graph, events } = get();
     if (!graph) return;
-    const next = [...get().decouples, { label: label ?? path, path, target }];
+    // prevent duplicate layer for same target+path
+    const exists = get().decouples.some((l) => l.target.type === target.type && l.target.id === target.id && l.path === path);
+    const next = exists ? get().decouples : [...get().decouples, { label: label ?? path, path, target }];
     const view = decoupleCompositeDownstream(
       graph,
       events,
