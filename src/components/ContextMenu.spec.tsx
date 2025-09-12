@@ -37,14 +37,13 @@ describe('ContextMenu foundation', () => {
     expect(collapse).toBeInTheDocument();
   });
 
-  it('renders menu items with enable/disable logic for edge target', () => {
+  it('does not show decouple for edge target (node-only)', () => {
     const g = useFlowStore.getState().graph!;
     const e = g.edges.find((ed) => ed.source !== 'START');
     if (!e) return; // skip if no such edge
     useFlowStore.getState().openCtxMenu({ type: 'edge', id: e.id }, { x: 100, y: 100 });
     render(<ContextMenu />);
-    const person = screen.getByRole('menuitem', { name: /Decouple by Person/i });
-    // Presence is enough
-    expect(person).toBeInTheDocument();
+    const person = screen.queryByRole('menuitem', { name: /Decouple by Person/i });
+    expect(person).toBeNull();
   });
 });

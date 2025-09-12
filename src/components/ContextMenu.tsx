@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useFlowStore } from '@/state/store';
-import { bfsLayers } from '@/lib/graph';
+// Context menu logic is node-local; no downstream propagation awareness.
 
 type MenuItem = {
   key: string;
@@ -33,35 +33,16 @@ export function ContextMenu() {
     // Helpers
     const outgoing = (nodeId: string) => graph.edges.filter((e) => e.source === nodeId);
     const edgeById = (id: string) => graph.edges.find((e) => e.id === id);
-    // Reachability helpers
-    const distFrom = (nodeId: string) => bfsLayers(graph, [nodeId]);
-    const nodeReachableFromTarget = (layerTarget: { type: 'node' | 'edge'; id: string }, nodeId: string) => {
-      // A layer's effect region starts at its target (node) or at the source of its edge target
-      const origin = layerTarget.type === 'node' ? layerTarget.id : layerTarget.id.split('__')[0];
-      const dist = distFrom(origin);
-      return dist[nodeId] != null;
-    };
-    const nodeAffectedByAnyDecouple = (nodeId: string) => decouples.some((l) => nodeReachableFromTarget(l.target, nodeId));
     const conceptPath = {
       person: 'resource',
     } as const;
-    const nodeAffectedByConcept = (nodeId: string, path: string) => decouples.some((l) => l.path === path && nodeReachableFromTarget(l.target, nodeId));
+    const nodeAffectedByConcept = (nodeId: string, path: string) => decouples.some((l) => l.path === path && l.target.type === 'node' && l.target.id === nodeId);
 
     let canDecouplePerson = false;
     let canCollapse = false;
     let canExpand = false; // reserved for collapsed meta-nodes in future milestones
 
-    if (t.type === 'edge') {
-      const e = edgeById(t.id);
-      if (e) {
-        // Use traversals to count distinct departments/resources, if available
-        const resSet = new Set<string>();
-        for (const tr of e.traversals) {
-          if ((tr as any).resource) resSet.add((tr as any).resource as string);
-        }
-        canDecouplePerson = resSet.size >= 2 || (e.uniqueResources ?? 0) >= 2;
-      }
-    } else if (t.type === 'node') {
+    if (t.type === 'node') {
       const outs = outgoing(t.id);
       const resSet = new Set<string>();
       // Use the events to detect real distinct departments/resources handling this node
@@ -77,13 +58,10 @@ export function ContextMenu() {
     }
 
     const baseItems: MenuItem[] = [];
-    // Per-concept decouple or undo (node target only for downstream operations)
+    // Per-concept decouple or undo (node target only)
     const canDownOps = t.type === 'node';
     const pushConcept = (key: keyof typeof conceptPath, label: string, canDecouple: boolean) => {
-      if (!canDownOps) {
-        baseItems.push({ key, label: `Decouple by ${label}`, enabled: canDecouple });
-        return;
-      }
+      if (!canDownOps) return; // no decouple on edge targets
       const path = conceptPath[key];
       const hasDown = nodeAffectedByConcept(t.id, path);
       if (hasDown) {

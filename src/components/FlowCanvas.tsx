@@ -59,6 +59,13 @@ function CanvasInner() {
       const v = Math.log(count) / Math.log(globalMax); // 0..1
       return minW + v * (maxW - minW);
     };
+    const meanDays = (ms?: number) => {
+      if (!ms || ms <= 0) return '0d';
+      const days = ms / (24 * 60 * 60 * 1000);
+      return `${Math.round(days)}d`;
+    };
+    const labelBg = { fill: '#F9FAFB', fillOpacity: 0.95, stroke: '#E5E7EB', strokeWidth: 1 } as const; // light bg
+    const labelText = { fill: '#111827', fontSize: 12 } as const; // dark text for contrast
     // Build base edges
     let baseEdges: Edge[] = graph.edges
       .filter((e) => visibleEdges.has(e.id))
@@ -67,30 +74,57 @@ function CanvasInner() {
         source: e.source,
         target: e.target,
         type: 'default',
-        label: String(e.count),
+        label: `(#${e.count}/${meanDays(e.meanMs)})`,
+        labelShowBg: true,
+        labelBgStyle: labelBg as any,
+        labelStyle: labelText as any,
         style: { stroke: '#9ca3af', strokeWidth: widthFor(e.count) },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
         selectable: true,
         interactionWidth: 24,
       }));
 
-    // Overlay decoupled edges (department) replacing base edges downstream
+    // Overlay decoupled edges (person) replacing base edges only at decoupled nodes
     if (decoupleView) {
       const replaced = decoupleView.replacedEdgeIds;
       baseEdges = baseEdges.filter((e) => !replaced.has(e.id));
-      const decoupledEdges: Edge[] = decoupleView.groupEdges
-        .filter((ge) => visibleEdges.has(`${ge.source}__${ge.target}`))
-        .map((ge) => ({
-          id: ge.id,
-          source: ge.source,
-          target: ge.target,
-          type: 'default',
-          label: String(ge.count) + ` (${ge.groupKey})`,
-          style: { stroke: '#9ca3af', strokeWidth: widthFor(ge.count) },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
-          selectable: true,
-          interactionWidth: 24,
-        }));
+      const visibleGroups = decoupleView.groupEdges.filter((ge) => visibleEdges.has(`${ge.source}__${ge.target}`));
+      // Offset labels for multiple groups on same base edge to avoid overlap
+      const byBase = new Map<string, typeof visibleGroups>();
+      for (const ge of visibleGroups) {
+        const key = `${ge.source}__${ge.target}`;
+        const arr = (byBase.get(key) || []) as any;
+        arr.push(ge);
+        byBase.set(key, arr);
+      }
+      const decoupledEdges: Edge[] = [];
+      for (const [baseId, arr] of byBase.entries()) {
+        const n = (arr as any[]).length;
+        // center around 0, step 14px
+        const step = 14;
+        const start = -((n - 1) * step) / 2;
+        (arr as any[]).forEach((ge: any, idx: number) => {
+          const offsetY = start + idx * step;
+          const mean = (ge as any).meanMs as number | undefined;
+          const line1 = `(#${ge.count}/${meanDays(mean)})`;
+          const line2 = `👤 ${ge.groupKey}`;
+          decoupledEdges.push({
+            id: ge.id,
+            source: ge.source,
+            target: ge.target,
+            type: 'default',
+            label: `${line1}\n${line2}`,
+            labelStyle: { transform: `translateY(${offsetY}px)` },
+            labelShowBg: true,
+            labelBgStyle: labelBg as any,
+            labelStyle: { ...(labelText as any), transform: `translateY(${offsetY}px)` },
+            style: { stroke: '#9ca3af', strokeWidth: widthFor(ge.count) },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
+            selectable: true,
+            interactionWidth: 24,
+          });
+        });
+      }
       return { nodes, edges: [...baseEdges, ...decoupledEdges] };
     }
     const edges = baseEdges;
