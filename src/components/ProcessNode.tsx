@@ -3,9 +3,9 @@ import type { NodeProps } from 'reactflow';
 import { Handle, Position } from 'reactflow';
 import { useFlowStore } from '@/state/store';
 
-export type ProcessNodeData = { label: string };
+export type ProcessNodeData = { label: string; active?: boolean };
 
-export const ProcessNode = memo(function ProcessNode({ id, data, selected }: NodeProps<ProcessNodeData>) {
+export const ProcessNode = memo(function ProcessNode({ id, data }: NodeProps<ProcessNodeData>) {
   const setSelection = useFlowStore((s) => s.setSelection);
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -21,7 +21,7 @@ export const ProcessNode = memo(function ProcessNode({ id, data, selected }: Nod
       tabIndex={0}
       onKeyDown={onKeyDown}
       className={`focus-ring rounded-md px-3 py-1.5 text-sm shadow-sm border transition-colors cursor-pointer ${
-        selected
+        data?.active
           ? 'bg-zinc-600/70 border-zinc-400 text-zinc-100'
           : 'bg-zinc-700/50 border-zinc-500 text-zinc-100 hover:bg-zinc-600/60 hover:border-zinc-400'
       }`}

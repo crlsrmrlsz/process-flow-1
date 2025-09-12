@@ -44,9 +44,9 @@ function CanvasInner() {
         id: n.id,
         type: 'process',
         position: layout[n.id] || { x: 0, y: 0 },
-        data: { label: n.label },
+        data: { label: n.label, active: selection?.type === 'node' && selection.id === n.id },
         draggable: false,
-        selectable: true,
+        selectable: false,
         className: 'text-xs',
         // Orient edges vertically: outgoing from bottom, incoming at top
         sourcePosition: Position.Bottom,
@@ -220,15 +220,8 @@ function CanvasInner() {
     clearHover();
   }, [clearHover]);
 
-  const selectedEdgeId = selection?.type === 'edge' ? selection.id : undefined;
-  const selectedNodeId = selection?.type === 'node' ? selection.id : undefined;
-
-  const rfNodes = useMemo(() => {
-    return nodes.map((n) => ({ ...n, draggable: true, selected: n.id === selectedNodeId }));
-  }, [nodes, selectedNodeId]);
-  const rfEdges = useMemo(() => {
-    return edges.map((e) => ({ ...e, selected: e.id === selectedEdgeId }));
-  }, [edges, selectedEdgeId]);
+  const rfNodes = useMemo(() => nodes.map((n) => ({ ...n, draggable: true })), [nodes]);
+  const rfEdges = useMemo(() => edges.map((e) => ({ ...e })), [edges]);
 
   // Auto-fit on step changes to keep new elements in view
   useEffect(() => {
@@ -254,7 +247,7 @@ function CanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesConnectable={false}
-        elementsSelectable
+        elementsSelectable={false}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onNodesChange={onNodesChange}
