@@ -23,10 +23,6 @@ function byCase(events: EventLogEvent[]): Map<string, EventLogEvent[]> {
   return m;
 }
 
-export function decoupleByDepartmentDownstream(graph: Graph, events: EventLogEvent[], target: DecoupleTarget): DecoupleView {
-  return decoupleDownstreamBySelector(graph, events, target, (e) => e.department || 'Unknown');
-}
-
 export function decoupleByResourceDownstream(graph: Graph, events: EventLogEvent[], target: DecoupleTarget): DecoupleView {
   return decoupleDownstreamBySelector(graph, events, target, (e) => e.resource || 'Unknown');
 }
@@ -207,4 +203,68 @@ export function decoupleCompositeDownstream(
   const groupEdges: DecoupledEdge[] = [];
   for (const bucket of groups.values()) groupEdges.push(...bucket.values());
   return { groupEdges, replacedEdgeIds: replaced };
+}
+
+// Node-local decouple: split only the immediate outgoing transitions from a node by selector value (e.g., resource).
+export function decoupleNodeLocalBySelector(
+  graph: Graph,
+  events: EventLogEvent[],
+  nodeId: string,
+  selector: (e: EventLogEvent) => string | undefined,
+): DecoupleView {
+  const by = byCase(events);
+  const groups = new Map<string, Map<string, DecoupledEdge>>();
+  const replaced = new Set<string>();
+
+  const push = (groupKey: string, target: string, dur: number, caseId: string, res?: string) => {
+    const baseId = `${nodeId}__${target}`;
+    replaced.add(baseId);
+    let bucket = groups.get(groupKey);
+    if (!bucket) { bucket = new Map(); groups.set(groupKey, bucket); }
+    const id = `${groupKey}|${baseId}`;
+    let e = bucket.get(id);
+    if (!e) {
+      e = { id, source: nodeId, target, count: 0, traversals: [], groupKey } as DecoupledEdge;
+      bucket.set(id, e);
+    }
+    e.count++;
+    e.traversals.push({ caseId, startTs: '', endTs: '', durationMs: dur, resource: res });
+  };
+
+  for (const [caseId, arr] of by) {
+    for (let i = 0; i < arr.length - 1; i++) {
+      const a = arr[i], b = arr[i + 1];
+      if (a.activity !== nodeId) continue;
+      const key = selector(a) || 'Unknown';
+      const dur = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      push(key, b.activity, dur, caseId, a.resource);
+    }
+  }
+
+  const groupEdges: DecoupledEdge[] = [];
+  for (const bucket of groups.values()) {
+    for (const e of bucket.values()) {
+      const durs = e.traversals.map((t) => t.durationMs);
+      if (durs.length) {
+        const sorted = [...durs].sort((a, b) => a - b);
+        const mean = durs.reduce((a, b) => a + b, 0) / durs.length;
+        const med = sorted[Math.ceil(0.5 * sorted.length) - 1];
+        const p90 = sorted[Math.ceil(0.9 * sorted.length) - 1];
+        (e as any).meanMs = mean; (e as any).medianMs = med; (e as any).p90Ms = p90;
+        (e as any).minMs = sorted[0]; (e as any).maxMs = sorted[sorted.length - 1];
+      }
+      groupEdges.push(e);
+    }
+  }
+  return { groupEdges, replacedEdgeIds: replaced };
+}
+
+export function decoupleNodeLocalByPath(
+  graph: Graph,
+  events: EventLogEvent[],
+  target: DecoupleTarget,
+  path: string,
+): DecoupleView {
+  if (target.type !== 'node') return { groupEdges: [], replacedEdgeIds: new Set() };
+  return decoupleNodeLocalBySelector(graph, events, target.id, selectorFromPath(path));
 }

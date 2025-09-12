@@ -4,7 +4,7 @@ import { buildGraph, START_NODE_ID, bfsLayers } from '@/lib/graph';
 import { computeLayout } from '@/lib/layout';
 import { computeVisibleFromExpanded } from '@/lib/visible';
 import type { EventLogEvent, Graph } from '@/types';
-import { decoupleCompositeDownstream, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
+import { decoupleNodeLocalByPath, type DecoupleTarget, type DecoupleView } from '@/lib/decouple';
 import { selectorFromPath } from '@/lib/attr';
 
 type Selection = { type: 'node' | 'edge'; id: string } | null;
@@ -145,25 +145,28 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     // prevent duplicate layer for same target+path
     const exists = get().decouples.some((l) => l.target.type === target.type && l.target.id === target.id && l.path === path);
     const next = exists ? get().decouples : [...get().decouples, { label: label ?? path, path, target }];
-    const view = decoupleCompositeDownstream(
-      graph,
-      events,
-      next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
-    );
-    set({ decouples: next, decoupleView: view });
+    let replaced = new Set<string>();
+    const groupEdgesAll: any[] = [];
+    for (const l of next) {
+      const v = decoupleNodeLocalByPath(graph, events, l.target, l.path);
+      v.groupEdges.forEach((ge) => groupEdgesAll.push(ge));
+      v.replacedEdgeIds.forEach((id) => replaced.add(id));
+    }
+    set({ decouples: next, decoupleView: { groupEdges: groupEdgesAll as any, replacedEdgeIds: replaced } });
   },
   clearLastDecouple: () => {
     const { decouples, graph, events } = get();
     if (!graph) return;
     const next = decouples.slice(0, -1);
-    const view = next.length
-      ? decoupleCompositeDownstream(
-          graph,
-          events,
-          next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
-        )
-      : null;
-    set({ decouples: next, decoupleView: view });
+    if (next.length === 0) { set({ decouples: [], decoupleView: null }); return; }
+    let replaced = new Set<string>();
+    const groupEdgesAll: any[] = [];
+    for (const l of next) {
+      const v = decoupleNodeLocalByPath(graph, events, l.target, l.path);
+      v.groupEdges.forEach((ge) => groupEdgesAll.push(ge));
+      v.replacedEdgeIds.forEach((id) => replaced.add(id));
+    }
+    set({ decouples: next, decoupleView: { groupEdges: groupEdgesAll as any, replacedEdgeIds: replaced } });
   },
   resetDecouples: () => set({ decouples: [], decoupleView: null }),
   resetDecouplesDownstream: (nodeId) => {
@@ -176,14 +179,15 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       return dist[src] != null;
     };
     const next = decouples.filter((l) => !isDown(l.target));
-    const view = next.length
-      ? decoupleCompositeDownstream(
-          graph,
-          events,
-          next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
-        )
-      : null;
-    set({ decouples: next, decoupleView: view });
+    if (next.length === 0) { set({ decouples: [], decoupleView: null }); return; }
+    let replaced = new Set<string>();
+    const groupEdgesAll: any[] = [];
+    for (const l of next) {
+      const v = decoupleNodeLocalByPath(graph, events, l.target, l.path);
+      v.groupEdges.forEach((ge) => groupEdgesAll.push(ge));
+      v.replacedEdgeIds.forEach((id) => replaced.add(id));
+    }
+    set({ decouples: next, decoupleView: { groupEdges: groupEdgesAll as any, replacedEdgeIds: replaced } });
   },
   undoDecoupleByPathDownstream: (nodeId, path) => {
     const { graph, events, decouples } = get();
@@ -195,14 +199,15 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       return dist[src] != null;
     };
     const next = decouples.filter((l) => !(l.path === path && isDown(l.target)));
-    const view = next.length
-      ? decoupleCompositeDownstream(
-          graph,
-          events,
-          next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
-        )
-      : null;
-    set({ decouples: next, decoupleView: view });
+    if (next.length === 0) { set({ decouples: [], decoupleView: null }); return; }
+    let replaced = new Set<string>();
+    const groupEdgesAll: any[] = [];
+    for (const l of next) {
+      const v = decoupleNodeLocalByPath(graph, events, l.target, l.path);
+      v.groupEdges.forEach((ge) => groupEdgesAll.push(ge));
+      v.replacedEdgeIds.forEach((id) => replaced.add(id));
+    }
+    set({ decouples: next, decoupleView: { groupEdges: groupEdgesAll as any, replacedEdgeIds: replaced } });
   },
   setHover: (pos, text) => set({ hover: { ...pos, text } }),
   clearHover: () => set({ hover: null }),

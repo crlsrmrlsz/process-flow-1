@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decoupleCompositeDownstream } from './decouple';
+import { decoupleNodeLocalByPath } from './decouple';
 import type { EventLogEvent } from '@/types';
 
 const base = new Date('2025-01-01T09:00:00Z').getTime();
@@ -15,14 +15,15 @@ const events: EventLogEvent[] = [
 ];
 
 describe('decoupleCompositeDownstream', () => {
-  it('builds grouped edges with layered keys Person only', () => {
-    const view = decoupleCompositeDownstream(
+  it('builds grouped edges by person for outgoing edges from a node', () => {
+    const view = decoupleNodeLocalByPath(
       { nodes: [], edges: [], adjacency: {}, reverse: {} } as any,
       events,
-      [ { target: { type: 'node', id: 'B' }, selector: (e) => e.resource, label: 'Person' } ],
+      { type: 'node', id: 'B' },
+      'resource',
     );
     const keys = new Set(view.groupEdges.map((e) => e.groupKey));
-    expect(keys.has('Person: p1')).toBe(true);
-    expect(keys.has('Person: p2')).toBe(true);
+    expect(keys.has('p1')).toBe(true);
+    expect(keys.has('p2')).toBe(true);
   });
 });

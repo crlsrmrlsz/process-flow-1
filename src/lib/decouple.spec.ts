@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decoupleByResourceDownstream } from './decouple';
+import { decoupleNodeLocalByPath } from './decouple';
 import { buildGraph } from './graph';
 import type { EventLogEvent } from '@/types';
 
@@ -16,19 +16,20 @@ const events: EventLogEvent[] = [
   { caseId: 'C2', activity: 'C', timestamp: t(30), resource: 'p2' },
 ];
 
-describe('decoupleByResourceDownstream', () => {
+describe('decoupleNodeLocalByPath (person only)', () => {
   const g = buildGraph(events);
-  it('splits edges into department groups and replaces base downstream edges', () => {
-    const view = decoupleByResourceDownstream(g, events, { type: 'node', id: 'A' });
+  it('splits only immediate outgoing edges from the node and replaces those base edges', () => {
+    const view = decoupleNodeLocalByPath(g, events, { type: 'node', id: 'A' }, 'resource');
     const labels = new Set(view.groupEdges.map((e) => e.groupKey));
     expect(labels.has('p1')).toBe(true);
     expect(labels.has('p2')).toBe(true);
-    // Should produce grouped edges including A->B and A->D and downstream to C
+    // Should produce grouped edges for A->B and A->D only (no downstream grouping)
     const ids = new Set(view.groupEdges.map((e) => `${e.source}__${e.target}`));
     expect(ids.has('A__B')).toBe(true);
     expect(ids.has('A__D')).toBe(true);
-    expect(ids.has('B__C') || ids.has('D__C')).toBe(true);
-    // Base edges downstream from A should be marked replaced
-    expect(view.replacedEdgeIds.has('A__B') || view.replacedEdgeIds.has('A__D')).toBe(true);
+    expect(ids.has('B__C') || ids.has('D__C')).toBe(false);
+    // Base edges from A should be marked replaced
+    expect(view.replacedEdgeIds.has('A__B')).toBe(true);
+    expect(view.replacedEdgeIds.has('A__D')).toBe(true);
   });
 });
