@@ -154,8 +154,15 @@ function CanvasInner() {
     return { nodes, edges };
   }, [graph, layout, getVisible, expanded, selection, decoupleView]);
 
-  const onNodeClick = useCallback((_: unknown, n: Node) => { expandNode(n.id); setSelection({ type: 'node', id: n.id }); }, [expandNode, setSelection]);
-  const onEdgeClick = useCallback((_: unknown, e: Edge) => setSelection({ type: 'edge', id: e.id }), [setSelection]);
+  const onNodeClick = useCallback((_: unknown, n: Node) => {
+    expandNode(n.id);
+    setSelection({ type: 'node', id: n.id });
+    window.setTimeout(() => setSelection(null), 120);
+  }, [expandNode, setSelection]);
+  const onEdgeClick = useCallback((_: unknown, e: Edge) => {
+    setSelection({ type: 'edge', id: e.id });
+    window.setTimeout(() => setSelection(null), 120);
+  }, [setSelection]);
   const onNodesChange: OnNodesChange = useCallback((changes: NodeChange[]) => {
     changes.forEach((ch) => {
       if (ch.type === 'position' && ch.position) {

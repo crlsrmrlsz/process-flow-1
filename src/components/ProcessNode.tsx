@@ -22,9 +22,9 @@ export const ProcessNode = memo(function ProcessNode({ id, data, selected }: Nod
       onKeyDown={onKeyDown}
       className={`focus-ring rounded-md px-3 py-1.5 text-sm shadow-sm border transition-colors cursor-pointer ${
         selected
-          ? 'bg-indigo-500/20 border-indigo-400 text-indigo-200 hover:bg-indigo-500/30 hover:border-indigo-300'
+          ? 'bg-zinc-600/70 border-zinc-400 text-zinc-100'
           : 'bg-zinc-700/50 border-zinc-500 text-zinc-100 hover:bg-zinc-600/60 hover:border-zinc-400'
-      } hover:border-2`}
+      }`}
     >
       {/* Multiple hidden handles along top/bottom so parallel edges can anchor without overlapping */}
       {[-3, -2, -1, 0, 1, 2, 3].map((slot) => (

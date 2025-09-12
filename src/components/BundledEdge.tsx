@@ -55,7 +55,7 @@ export function BundledEdge(props: EdgeProps) {
   const baseLx = cubicAt(t, sourceX, c1x, c2x, targetX);
   const baseLy = cubicAt(t, sourceY, c1y, c2y, targetY) - 10; // lift above curve
   // Extra horizontal spread for labels to avoid overlap
-  const labelSpread = 90;
+  const labelSpread = 110;
   const lx = baseLx + lane * labelSpread;
   const ly = baseLy;
 
@@ -86,6 +86,7 @@ export function BundledEdge(props: EdgeProps) {
       {label ? (
         <EdgeLabelRenderer>
           <div
+            onMouseDown={onHandleMouseDown}
             style={{
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`,
@@ -93,30 +94,16 @@ export function BundledEdge(props: EdgeProps) {
               color: labelText,
               border: `1px solid ${labelBorder}`,
               borderRadius: 6,
-              padding: '1px 4px',
-              fontSize: 9,
-              lineHeight: 1.05,
+              padding: '0px 4px',
+              fontSize: 8.5,
+              lineHeight: 1.0,
               whiteSpace: 'pre',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+              boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+              cursor: 'grab'
             }}
           >
             {String(label)}
           </div>
-          <div
-            onMouseDown={onHandleMouseDown}
-            title="Drag to adjust curve"
-            style={{
-              position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${lx + 12}px, ${ly - 14}px)`,
-              width: 8,
-              height: 8,
-              borderRadius: 9999,
-              background: '#fff',
-              border: '1px solid rgba(148,163,184,0.8)',
-              cursor: 'grab',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-            }}
-          />
         </EdgeLabelRenderer>
       ) : null}
     </>
