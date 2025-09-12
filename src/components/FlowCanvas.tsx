@@ -14,9 +14,11 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useFlowStore } from '@/state/store';
 import { ProcessNode } from './ProcessNode';
+import { BundledEdge } from './BundledEdge';
 import { START_NODE_ID } from '@/lib/graph';
 
 const nodeTypes = { process: ProcessNode } as const;
+const edgeTypes = { bundled: BundledEdge } as const;
 
 function CanvasInner() {
   const graph = useFlowStore((s) => s.graph);
@@ -109,13 +111,7 @@ function CanvasInner() {
       };
       for (const [baseId, arr] of byBase.entries()) {
         const n = (arr as any[]).length;
-        const slots = (slotMap as any)[n] || [-3, -2, -1, 0, 1, 2, 3];
-        // center around 0 for label offsets, step 14px
-        const step = 14;
-        const start = -((Math.min(n, 7) - 1) * step) / 2;
         (arr as any[]).forEach((ge: any, idx: number) => {
-          const slot = slots[Math.min(idx, slots.length - 1)];
-          const offsetY = start + idx * step;
           const mean = (ge as any).meanMs as number | undefined;
           const line1 = `(#${ge.count}/${meanDays(mean)})`;
           const line2 = `👤 ${ge.groupKey}`;
@@ -123,13 +119,11 @@ function CanvasInner() {
             id: ge.id,
             source: ge.source,
             target: ge.target,
-            type: 'default',
+            type: 'bundled',
             label: `${line1}\n${line2}`,
-            labelStyle: { ...(labelText as any), transform: `translateY(${offsetY}px)` },
-            labelShowBg: true,
-            labelBgStyle: labelBg as any,
-            sourceHandle: `s${slot}`,
-            targetHandle: `t${slot}`,
+            data: { idx, count: n },
+            sourceHandle: 's0',
+            targetHandle: 't0',
             style: { stroke: '#9ca3af', strokeWidth: widthFor(ge.count) },
             markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
             selectable: true,
@@ -234,6 +228,7 @@ function CanvasInner() {
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         nodesConnectable={false}
         elementsSelectable
         onNodeClick={onNodeClick}
