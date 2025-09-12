@@ -194,15 +194,10 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     set({ decouples: next, decoupleView: { groupEdges: groupEdgesAll as any, replacedEdgeIds: replaced } });
   },
   undoDecoupleByPathDownstream: (nodeId, path) => {
+    // Node-local semantics: remove only the layer at this node for the given path
     const { graph, events, decouples } = get();
     if (!graph || decouples.length === 0) return;
-    const dist = bfsLayers(graph, [nodeId]);
-    const isDown = (t: CtxTarget) => {
-      if (t.type === 'node') return dist[t.id] != null;
-      const [src] = t.id.split('__');
-      return dist[src] != null;
-    };
-    const next = decouples.filter((l) => !(l.path === path && isDown(l.target)));
+    const next = decouples.filter((l) => !(l.path === path && l.target.type === 'node' && l.target.id === nodeId));
     if (next.length === 0) { set({ decouples: [], decoupleView: null }); return; }
     let replaced = new Set<string>();
     const groupEdgesAll: any[] = [];
