@@ -9,24 +9,17 @@ test('decouple → undo → reset downstream (with screenshots)', async ({ page 
   const count = await nodes.count();
   const target = count > 1 ? nodes.nth(1) : nodes.first();
 
-  // 1) Decouple by Person if available, else by Department
+  // 1) Decouple by Person
   await target.click({ button: 'right' });
-  let undoPattern = /Undo decouple by Person/i;
   const decouplePerson = page.getByRole('menuitem', { name: /Decouple by Person/i });
   if (await decouplePerson.isVisible() && await decouplePerson.isEnabled()) {
     await decouplePerson.click();
-  } else {
-    const decoupleDept = page.getByRole('menuitem', { name: /Decouple by Department/i });
-    if (await decoupleDept.isVisible() && await decoupleDept.isEnabled()) {
-      await decoupleDept.click();
-      undoPattern = /Undo decouple by Department/i;
-    }
   }
   await page.locator('.react-flow').screenshot({ path: 'test-results/decouple-applied.png' });
 
   // 2) Undo decouple
   await target.click({ button: 'right' });
-  const undoItem = page.getByRole('menuitem', { name: undoPattern });
+  const undoItem = page.getByRole('menuitem', { name: /Undo decouple by Person/i });
   if (await undoItem.isVisible()) {
     await undoItem.click();
     await page.locator('.react-flow').screenshot({ path: 'test-results/undo-decouple.png' });

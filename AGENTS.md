@@ -38,19 +38,19 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - React Flow canvas wrapped in `ReactFlowProvider`.
   - Uses built‑in `type: 'default'` edges with label and arrow marker for reliability.
   - Auto‑fits on element changes (`fitView({ padding: 0.2 })`).
-  - Nodes set `sourcePosition: Right`, `targetPosition: Left`.
+  - Vertical flow orientation (top → bottom): nodes set `sourcePosition: Bottom`, `targetPosition: Top`.
   - Includes a `Background` grid; right‑click opens context menu; hover shows edge tooltip.
   - Edge width scales subtly with count (log‑scaled) for readability on dark theme.
 - `src/components/ProcessNode.tsx`
   - Custom node with keyboard a11y. Includes invisible left/right `Handle`s to ensure edge anchoring.
 - Removed: `DetailsPanel.tsx` and `ControlsPanel.tsx` in current UI.
 - `src/components/ContextMenu.tsx` / `src/components/EdgeTooltip.tsx`
-  - Context menu with decouple actions (Department/Person/Channel/Priority/Doc Quality), clear/reset decouples.
+  - Context menu: Decouple by Person/Undo; Collapse following; Expand all from node.
   - Edge tooltip shows mean/p90 duration on hover.
 - `src/state/store.ts`
   - Zustand store with `graph`, `layout`, `expanded`, `selection`, and `getVisible()`.
   - Reveal always starts from `START` in MVP; left‑click expands nodes.
-  - Loads precomputed data when present: `/data/permit.small.graph.json` and `/data/permit.small.events.json` (fallback to bundled sample).
+  - Data model simplified to person/resource only; department/other attributes removed.
 - `src/lib/graph.ts`
   - Build graph from event log. Adds synthetic `START` node and per‑transition traversals/durations.
 - `src/lib/step.ts`
@@ -86,6 +86,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Run: `npm run test:e2e` (starts dev server via Playwright config).
   - The smoke test asserts both the computed visible transitions and DOM edge elements.
   - Screenshot test captures context menu and decoupled canvas.
+ - Visual verification (always): run the screenshot E2E tests and review images in `test-results/*.png` after UI/layout changes to confirm arrows, labels, and spacing render correctly.
 
 ## Repository Etiquette
 - Branch names:

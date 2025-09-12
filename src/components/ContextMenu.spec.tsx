@@ -29,11 +29,8 @@ describe('ContextMenu foundation', () => {
     const nodeId = g.nodes.some((n) => n.id === 'A') ? 'A' : 'START';
     useFlowStore.getState().openCtxMenu({ type: 'node', id: nodeId }, { x: 100, y: 100 });
     render(<ContextMenu />);
-    const dept = screen.getByRole('menuitem', { name: /Decouple by Department/i });
     const person = screen.getByRole('menuitem', { name: /Decouple by Person/i });
     const collapse = screen.getByRole('menuitem', { name: /Collapse Following Transitions/i });
-    // Department may be disabled in demo data. Presence is enough.
-    expect(dept).toBeInTheDocument();
     // Person decouple may vary; presence is enough to validate rendering
     expect(person).toBeInTheDocument();
     // Collapse item present (enabled may vary)
@@ -46,10 +43,8 @@ describe('ContextMenu foundation', () => {
     if (!e) return; // skip if no such edge
     useFlowStore.getState().openCtxMenu({ type: 'edge', id: e.id }, { x: 100, y: 100 });
     render(<ContextMenu />);
-    const dept = screen.getByRole('menuitem', { name: /Decouple by Department/i });
     const person = screen.getByRole('menuitem', { name: /Decouple by Person/i });
-    // Department/Person enablement depends on data; presence is enough
-    expect(dept).toBeInTheDocument();
+    // Presence is enough
     expect(person).toBeInTheDocument();
   });
 });

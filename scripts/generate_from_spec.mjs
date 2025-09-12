@@ -110,7 +110,7 @@ async function main() {
     return varWeights[varWeights.length - 1][0];
   };
 
-  const onlineShareWeekday = spec.arrivals.channel_by_dow.online_share_weekday ?? 0.6;
+  // Channel and other attributes are not emitted in this simplified model.
 
   const jsonlPath = `${opts.out}.jsonl`;
   const ws = fs.createWriteStream(jsonlPath, { encoding: 'utf8' });
@@ -118,17 +118,16 @@ async function main() {
   let baseTs = Date.now();
   for (let i = 0; i < N; i++) {
     const caseId = `RP-${i + 1}`;
-    // Alternate channels to ensure both appear
-    const application_type = (i % 3 === 0) ? 'in_person' : 'online';
+    // Attributes like channel are omitted in this simplified model
     let ts = baseTs + i * 3_600_000; // stagger starts by 1h
     const variant = pickVariant();
     const seq = variants[variant] || variants.happy_path;
     for (const act of seq) {
       const state = stateById.get(act);
       if (!state) continue;
-      const resource = resolveResource(state, { application_type });
+      const resource = resolveResource(state, {});
       // Emit event at current ts
-      ws.write(JSON.stringify({ case_id: caseId, activity: act, timestamp: nowISO(ts), resource, application_type }) + '\n');
+      ws.write(JSON.stringify({ case_id: caseId, activity: act, timestamp: nowISO(ts), resource }) + '\n');
       // Advance time by sampled duration (minutes → ms)
       const mins = sampleDuration(state);
       ts += mins * 60_000;

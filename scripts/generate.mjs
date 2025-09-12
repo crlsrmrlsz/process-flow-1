@@ -19,44 +19,44 @@ function parseArgs() {
 function* genCase(caseId, baseTs, pattern) {
   let ts = baseTs;
   const step = (mins) => (ts += mins * 60_000);
-  const push = (activity, resource, department, attributes) => ({ caseId, activity, timestamp: new Date(ts).toISOString(), resource, department, attributes });
+  const push = (activity, resource) => ({ caseId, activity, timestamp: new Date(ts).toISOString(), resource });
   // Patterns assemble realistic flows
   if (pattern === 'straight') {
-    yield push('Submit Application', 'u-intake-1', 'Intake', { channel: 'online', priority: 'normal' });
-    step(10); yield push('Intake Review', 'u-intake-2', 'Intake');
-    step(10); yield push('Payment Due', 'u-fin-1', 'Finance', { amountDue: 120 });
-    step(20); yield push('Payment Received', 'u-fin-1', 'Finance', { amountPaid: 120 });
-    step(10); yield push('Assign To Staff', 'u-proc-1', 'Processing');
-    step(10); yield push('Initial Review', 'u-proc-1', 'Processing');
-    step(60 * 4); yield push('Approved', 'u-proc-1', 'Processing');
+    yield push('Submit Application', 'u-intake-1');
+    step(10); yield push('Intake Review', 'u-intake-2');
+    step(10); yield push('Payment Due', 'u-fin-1');
+    step(20); yield push('Payment Received', 'u-fin-1');
+    step(10); yield push('Assign To Staff', 'u-proc-1');
+    step(10); yield push('Initial Review', 'u-proc-1');
+    step(60 * 4); yield push('Approved', 'u-proc-1');
   } else if (pattern === 'docs-twice-underpaid-rework-reject') {
-    yield push('Submit Application', 'u-desk-1', 'ServiceDesk', { channel: 'in-person', priority: 'normal' });
-    step(10); yield push('Intake Review', 'u-intake-3', 'Intake');
-    step(8); yield push('Docs Check', 'u-intake-3', 'Intake', { docsCount: 2, docQuality: 'low' });
-    step(7); yield push('Request More Docs', 'u-intake-3', 'Intake');
-    step(25); yield push('Re-Upload Docs', 'applicant', 'Intake', { docsCount: 1, docQuality: 'medium' });
-    step(20); yield push('Resubmission Review', 'u-intake-3', 'Intake');
-    step(15); yield push('Request More Docs', 'u-intake-3', 'Intake');
-    step(45); yield push('Re-Upload Docs', 'applicant', 'Intake', { docsCount: 1, docQuality: 'high' });
-    step(20); yield push('Payment Due', 'u-fin-2', 'Finance', { amountDue: 200 });
-    step(10); yield push('Payment Underpaid', 'u-fin-2', 'Finance', { amountPaid: 150 });
-    step(30); yield push('Payment Corrected', 'u-fin-2', 'Finance', { amountPaid: 50 });
-    step(10); yield push('Assign To Staff', 'u-proc-2', 'Processing');
-    step(10); yield push('Initial Review', 'u-proc-2', 'Processing');
-    step(60); yield push('Rework', 'u-proc-2', 'Processing');
-    step(60); yield push('Second Review', 'u-proc-2', 'Processing');
-    step(20); yield push('Rejected', 'u-proc-2', 'Processing');
+    yield push('Submit Application', 'u-desk-1');
+    step(10); yield push('Intake Review', 'u-intake-3');
+    step(8); yield push('Docs Check', 'u-intake-3');
+    step(7); yield push('Request More Docs', 'u-intake-3');
+    step(25); yield push('Re-Upload Docs', 'applicant');
+    step(20); yield push('Resubmission Review', 'u-intake-3');
+    step(15); yield push('Request More Docs', 'u-intake-3');
+    step(45); yield push('Re-Upload Docs', 'applicant');
+    step(20); yield push('Payment Due', 'u-fin-2');
+    step(10); yield push('Payment Underpaid', 'u-fin-2');
+    step(30); yield push('Payment Corrected', 'u-fin-2');
+    step(10); yield push('Assign To Staff', 'u-proc-2');
+    step(10); yield push('Initial Review', 'u-proc-2');
+    step(60); yield push('Rework', 'u-proc-2');
+    step(60); yield push('Second Review', 'u-proc-2');
+    step(20); yield push('Rejected', 'u-proc-2');
   } else if (pattern === 'late-legal-approve') {
-    yield push('Submit Application', 'u-intake-1', 'Intake', { channel: 'online', priority: 'priority' });
-    step(10); yield push('Intake Review', 'u-intake-2', 'Intake');
-    step(10); yield push('Payment Due', 'u-fin-1', 'Finance', { amountDue: 150 });
-    step(165); yield push('Payment Late', 'u-fin-1', 'Finance');
-    step(10); yield push('Payment Received', 'u-fin-1', 'Finance', { amountPaid: 150 });
-    step(10); yield push('Assign To Staff', 'u-proc-3', 'Processing');
-    step(10); yield push('Initial Review', 'u-proc-3', 'Processing');
-    step(60); yield push('Escalate to Legal', 'u-proc-3', 'Processing');
-    step(40); yield push('Appeal Review', 'u-legal-1', 'Legal');
-    step(30); yield push('Approved', 'u-legal-1', 'Legal');
+    yield push('Submit Application', 'u-intake-1');
+    step(10); yield push('Intake Review', 'u-intake-2');
+    step(10); yield push('Payment Due', 'u-fin-1');
+    step(165); yield push('Payment Late', 'u-fin-1');
+    step(10); yield push('Payment Received', 'u-fin-1');
+    step(10); yield push('Assign To Staff', 'u-proc-3');
+    step(10); yield push('Initial Review', 'u-proc-3');
+    step(60); yield push('Escalate to Legal', 'u-proc-3');
+    step(40); yield push('Appeal Review', 'u-legal-1');
+    step(30); yield push('Approved', 'u-legal-1');
   }
 }
 
@@ -110,8 +110,6 @@ async function main() {
         activity: { type: 'UTF8' },
         timestamp: { type: 'UTF8' },
         resource: { type: 'UTF8', optional: true },
-        department: { type: 'UTF8', optional: true },
-        attributes: { type: 'JSON', optional: true },
       });
       const pqPath = `${outfileBase}.parquet`;
       const writer = await parquet.ParquetWriter.openFile(schema, pqPath);
@@ -139,4 +137,3 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
-

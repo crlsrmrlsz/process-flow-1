@@ -43,12 +43,10 @@ export function buildGraph(events: EventLogEvent[]): Graph {
     if (!adjacency[source].includes(target)) adjacency[source].push(target);
     if (!reverse[target].includes(source)) reverse[target].push(source);
 
-    // Track unique resource/department on the edge (stored temporarily as private sets)
+    // Track unique resource on the edge (stored temporarily as private set)
     const er = e as any;
     if (!er._resSet) er._resSet = new Set<string>();
-    if (!er._depSet) er._depSet = new Set<string>();
     if (sourceEvent?.resource) er._resSet.add(sourceEvent.resource);
-    if (sourceEvent?.department) er._depSet.add(sourceEvent.department);
   };
 
   for (const [caseId, list] of Object.entries(byCase)) {
@@ -75,7 +73,6 @@ export function buildGraph(events: EventLogEvent[]): Graph {
         durationMs:
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         resource: a.resource,
-        department: a.department,
       };
       addEdge(a.activity, b.activity, t, a);
     }
@@ -87,7 +84,6 @@ export function buildGraph(events: EventLogEvent[]): Graph {
     const { mean, median, min, max, p90 } = summarizeDurationsMs(durations);
     const er = e as any;
     const uniqueResources = er._resSet ? (er._resSet as Set<string>).size : 0;
-    const uniqueDepartments = er._depSet ? (er._depSet as Set<string>).size : 0;
     return {
       ...e,
       meanMs: mean,
@@ -96,7 +92,6 @@ export function buildGraph(events: EventLogEvent[]): Graph {
       minMs: min,
       maxMs: max,
       uniqueResources,
-      uniqueDepartments,
     } as GraphEdge;
   });
 

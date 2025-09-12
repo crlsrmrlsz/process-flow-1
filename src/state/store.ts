@@ -24,13 +24,13 @@ type FlowState = {
   init: () => void;
   expandNode: (id: string) => void;
   collapseNode: (id: string) => void;
+  expandAllFrom: (id: string) => void;
   resetExpanded: () => void;
   setSelection: (sel: Selection) => void;
   setNodePosition: (id: string, pos: { x: number; y: number }) => void;
   getVisible: () => { visibleEdges: Set<string>; visibleNodes: Set<string> };
   openCtxMenu: (target: CtxTarget, pos: { x: number; y: number }) => void;
   closeCtxMenu: () => void;
-  decoupleByDepartment: (target: DecoupleTarget) => void;
   decoupleByPath: (target: DecoupleTarget, path: string, label?: string) => void;
   clearLastDecouple: () => void;
   resetDecouples: () => void;
@@ -54,41 +54,16 @@ export const useFlowStore = create<FlowState>((set, get) => ({
 
   init: () => {
     (async () => {
-      function activityDepartment(act: string | undefined): string | undefined {
-        if (!act) return undefined;
-        // Coarse mapping for demo datasets generated from spec
-        if (act.startsWith('APP_SUBMIT') || act.startsWith('INITIAL_REVIEW')) return 'Intake';
-        if (act.startsWith('REQ_CHECK')) return 'Requirements';
-        if (act.startsWith('HEALTH_INSPECTION')) return 'Health';
-        if (act.startsWith('MANAGER_APPROVAL')) return 'Management';
-        if (act.startsWith('CARD_REQUEST') || act.startsWith('QUALITY_CHECK') || act.startsWith('NOTIFY_APPLICANT')) return 'System';
-        if (act.startsWith('CARD_PRODUCTION')) return 'Production';
-        if (act.startsWith('PERMIT_DELIVERY')) return 'Logistics';
-        if (act.startsWith('INFO_REQUEST')) return 'System';
-        if (act.startsWith('APPLICANT_RESPONSE')) return 'Applicant';
-        if (act.startsWith('REJECTED')) return 'Decision';
-        return undefined;
-      }
-
       function normalizeEvents(raw: any[]): EventLogEvent[] {
         if (!Array.isArray(raw)) return [];
         // If already in correct shape (caseId present), pass through
         if (raw.length && 'caseId' in raw[0]) return raw as EventLogEvent[];
-        return raw.map((e: any) => {
-          const channelRaw: string | undefined = e.application_type;
-          const channel = channelRaw === 'in_person' ? 'in-person' : channelRaw;
-          const attributes = channel ? { channel } : undefined;
-          const department = e.department ?? activityDepartment(e.activity);
-          return {
-            caseId: e.case_id ?? e.caseId,
-            activity: e.activity,
-            timestamp: e.timestamp,
-            resource: e.resource,
-            department,
-            attributes,
-            attrs: attributes,
-          } as EventLogEvent;
-        });
+        return raw.map((e: any) => ({
+          caseId: e.case_id ?? e.caseId,
+          activity: e.activity,
+          timestamp: e.timestamp,
+          resource: e.resource,
+        } as EventLogEvent));
       }
 
       function needsStartRebuild(g: Graph | null | undefined): boolean {
@@ -130,8 +105,19 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   },
   expandNode: (id) => set((state) => ({ expanded: new Set<string>([...state.expanded, id]) })),
   collapseNode: (id) => set((state) => {
+    const { graph } = state;
+    if (!graph) return {} as any;
+    const dist = bfsLayers(graph, [id]);
     const next = new Set(state.expanded);
-    next.delete(id);
+    for (const n of Object.keys(dist)) next.delete(n);
+    return { expanded: next };
+  }),
+  expandAllFrom: (id) => set((state) => {
+    const { graph } = state;
+    if (!graph) return {} as any;
+    const dist = bfsLayers(graph, [id]);
+    const next = new Set(state.expanded);
+    for (const n of Object.keys(dist)) next.add(n);
     return { expanded: next };
   }),
   resetExpanded: () => set({ expanded: new Set<string>() }),
@@ -152,19 +138,6 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   },
   closeCtxMenu: () => {
     set({ ctxMenu: { open: false, pos: null, target: null } });
-  },
-  decoupleByDepartment: (target) => {
-    const { graph, events } = get();
-    if (!graph) return;
-    // prevent duplicate layer for same target+path
-    const exists = get().decouples.some((l) => l.target.type === target.type && l.target.id === target.id && l.path === 'department');
-    const next = exists ? get().decouples : [...get().decouples, { label: 'Department', path: 'department', target }];
-    const view = decoupleCompositeDownstream(
-      graph,
-      events,
-      next.map((l) => ({ target: l.target, selector: selectorFromPath(l.path), label: l.label })),
-    );
-    set({ decouples: next, decoupleView: view });
   },
   decoupleByPath: (target, path, label) => {
     const { graph, events } = get();

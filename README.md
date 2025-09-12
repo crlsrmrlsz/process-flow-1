@@ -40,7 +40,7 @@ We derive a directed graph with a synthetic `START` node, transitions per consec
 - Single central canvas
 - Click any node to expand its outgoing transitions (START is always visible)
 - Built‑in edges with labels + arrowheads; hover emphasis; subtle width scaled by count
-- Context menu on nodes/edges: decouple by Department/Person/Channel/Priority/Doc Quality, undo decouple downstream, reset decouples downstream; expand/collapse (per-node) and reset expansion
+- Context menu on nodes/edges: decouple by Person (only), undo decouple downstream, reset decouples downstream; expand/collapse (per-node) and reset expansion
 - Keyboard: tab to focus nodes/edges, Enter selects
 
 ## Phase 2 Roadmap Hooks

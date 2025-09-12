@@ -3,19 +3,6 @@ export type EventLogEvent = {
   activity: string;
   timestamp: string; // ISO string
   resource?: string; // person/worker id
-  department?: string; // department name
-  // Prefer `attributes`, keep `attrs` for backward compatibility.
-  attributes?: {
-    amountDue?: number;
-    amountPaid?: number;
-    docsCount?: number;
-    docQuality?: 'low' | 'medium' | 'high';
-    channel?: 'online' | 'in-person';
-    priority?: 'normal' | 'priority';
-    notes?: string;
-  };
-  // legacy alias
-  attrs?: EventLogEvent['attributes'];
 };
 
 export type Traversal = {
@@ -24,7 +11,6 @@ export type Traversal = {
   endTs: string;
   durationMs: number;
   resource?: string;
-  department?: string;
 };
 
 export type NodeId = string;
@@ -48,7 +34,6 @@ export type GraphEdge = {
   minMs?: number;
   maxMs?: number;
   uniqueResources?: number;
-  uniqueDepartments?: number;
 };
 
 export type Graph = {

@@ -46,8 +46,9 @@ function CanvasInner() {
         draggable: false,
         selectable: true,
         className: 'text-xs',
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
+        // Orient edges vertically: outgoing from bottom, incoming at top
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top,
         // keep nodes non-animated to reduce noise
       }));
     const globalMax = Math.max(1, ...graph.edges.map((e) => e.count));

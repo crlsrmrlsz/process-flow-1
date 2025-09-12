@@ -24,7 +24,7 @@ describe('decouple downstream actions', () => {
   it('resetDecouplesDownstream removes all downstream layers and preserves upstream', () => {
     // Create two layers: one at Submit Application (upstream), one at Initial Review (downstream of Submit)
     useFlowStore.getState().decoupleByPath({ type: 'node', id: 'Submit Application' }, 'resource', 'Person');
-    useFlowStore.getState().decoupleByPath({ type: 'node', id: 'Intake Review' }, 'department', 'Department');
+    useFlowStore.getState().decoupleByPath({ type: 'node', id: 'Intake Review' }, 'resource', 'Person');
     expect(useFlowStore.getState().decouples.length).toBe(2);
     // Reset from Intake Review: should remove the layer at/after Intake Review only
     useFlowStore.getState().resetDecouplesDownstream('Intake Review');
@@ -33,4 +33,3 @@ describe('decouple downstream actions', () => {
     expect(layers[0].target.id).toBe('Submit Application');
   });
 });
-

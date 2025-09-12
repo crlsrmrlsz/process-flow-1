@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('context menu visible and decouple by department enabled on Submit Application', async ({ page }) => {
+test('context menu visible and decouple by person enabled on a node', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('g.react-flow__edge', { timeout: 30000 });
 
@@ -15,9 +15,9 @@ test('context menu visible and decouple by department enabled on Submit Applicat
   await menu.screenshot({ path: 'test-results/context-menu-node.png' });
 
   // Try to click Decouple by Department if enabled
-  const decoupleDept = page.getByRole('menuitem', { name: /Decouple by Department/i });
-  if (await decoupleDept.isEnabled()) {
-    await decoupleDept.click();
+  const decouplePerson = page.getByRole('menuitem', { name: /Decouple by Person/i });
+  if (await decouplePerson.isEnabled()) {
+    await decouplePerson.click();
     // After action, screenshot the canvas area
     const canvas = page.locator('.react-flow');
     await canvas.screenshot({ path: 'test-results/decouple-dept-canvas.png' });
