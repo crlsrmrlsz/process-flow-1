@@ -21,6 +21,7 @@ type FlowState = {
   decouples: { label: string; path: string; target: CtxTarget }[];
   decoupleView: DecoupleView | null;
   hover: { x: number; y: number; text: string } | null;
+  edgeBends: Record<string, { dx: number; dy: number }>;
   init: () => void;
   expandNode: (id: string) => void;
   collapseNode: (id: string) => void;
@@ -38,6 +39,8 @@ type FlowState = {
   undoDecoupleByPathDownstream: (nodeId: string, path: string) => void;
   setHover: (pos: { x: number; y: number }, text: string) => void;
   clearHover: () => void;
+  setEdgeBend: (edgeId: string, bend: { dx: number; dy: number }) => void;
+  resetEdgeBend: (edgeId: string) => void;
 };
 
 export const useFlowStore = create<FlowState>((set, get) => ({
@@ -51,6 +54,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   decouples: [],
   decoupleView: null,
   hover: null,
+  edgeBends: {},
 
   init: () => {
     (async () => {
@@ -211,4 +215,10 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   },
   setHover: (pos, text) => set({ hover: { ...pos, text } }),
   clearHover: () => set({ hover: null }),
+  setEdgeBend: (edgeId, bend) => set((s) => ({ edgeBends: { ...s.edgeBends, [edgeId]: bend } })),
+  resetEdgeBend: (edgeId) => set((s) => {
+    const next = { ...s.edgeBends };
+    delete next[edgeId];
+    return { edgeBends: next } as any;
+  }),
 }));

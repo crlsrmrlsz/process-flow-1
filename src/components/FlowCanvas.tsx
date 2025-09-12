@@ -61,6 +61,23 @@ function CanvasInner() {
       const v = Math.log(count) / Math.log(globalMax); // 0..1
       return minW + v * (maxW - minW);
     };
+    // Duration color scale (meanMs) across all edges: clamp between p10 and p90
+    const durs = graph.edges.map((e) => e.meanMs || 0).filter((x) => x > 0).sort((a, b) => a - b);
+    const q = (p: number) => (durs.length ? durs[Math.min(durs.length - 1, Math.max(0, Math.round(p * (durs.length - 1))))] : 0);
+    const lo = q(0.1), hi = Math.max(lo + 1, q(0.9));
+    const to01 = (ms?: number) => {
+      if (!ms || ms <= 0) return 0;
+      return Math.max(0, Math.min(1, (ms - lo) / (hi - lo)));
+    };
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+    const colorFor = (ms?: number) => {
+      const t = to01(ms);
+      // HSL: 210deg (blue) → 15deg (red)
+      const h = lerp(210, 15, t);
+      const s = 70;
+      const l = 60 - 10 * t;
+      return `hsl(${h} ${s}% ${l}%)`;
+    };
     const meanDays = (ms?: number) => {
       if (!ms || ms <= 0) return '0d';
       const days = ms / (24 * 60 * 60 * 1000);
@@ -80,8 +97,8 @@ function CanvasInner() {
         labelShowBg: true,
         labelBgStyle: labelBg as any,
         labelStyle: labelText as any,
-        style: { stroke: '#9ca3af', strokeWidth: widthFor(e.count) },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
+        style: { stroke: colorFor(e.meanMs), strokeWidth: widthFor(e.count) },
+        markerEnd: { type: MarkerType.ArrowClosed, color: colorFor(e.meanMs) },
         selectable: true,
         interactionWidth: 24,
       }));
@@ -124,8 +141,8 @@ function CanvasInner() {
             data: { idx, count: n },
             sourceHandle: 's0',
             targetHandle: 't0',
-            style: { stroke: '#9ca3af', strokeWidth: widthFor(ge.count) },
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
+            style: { stroke: colorFor((ge as any).meanMs), strokeWidth: widthFor(ge.count) },
+            markerEnd: { type: MarkerType.ArrowClosed, color: colorFor((ge as any).meanMs) },
             selectable: true,
             interactionWidth: 24,
           });
