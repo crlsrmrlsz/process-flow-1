@@ -96,9 +96,9 @@ function CanvasInner() {
         label: `(#${e.count}/${meanDays(e.meanMs)})`,
         labelShowBg: true,
         labelBgStyle: labelBg as any,
-        labelStyle: labelText as any,
-        style: { stroke: colorFor(e.meanMs), strokeWidth: widthFor(e.count) },
-        markerEnd: { type: MarkerType.ArrowClosed, color: colorFor(e.meanMs) },
+        labelStyle: { ...(labelText as any), fontSize: 10 },
+        style: { stroke: '#9ca3af', strokeWidth: widthFor(e.count) },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
         selectable: true,
         interactionWidth: 24,
       }));

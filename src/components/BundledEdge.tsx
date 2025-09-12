@@ -55,34 +55,30 @@ export function BundledEdge(props: EdgeProps) {
   const baseLx = cubicAt(t, sourceX, c1x, c2x, targetX);
   const baseLy = cubicAt(t, sourceY, c1y, c2y, targetY) - 10; // lift above curve
   // Extra horizontal spread for labels to avoid overlap
-  const labelSpread = 56;
+  const labelSpread = 90;
   const lx = baseLx + lane * labelSpread;
   const ly = baseLy;
 
   // Drag handle for manual bend adjustment
   const startPos = useRef<{x:number;y:number;dx:number;dy:number}|null>(null);
-  useEffect(() => {
-    function onMove(e: MouseEvent) {
+  const onHandleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startPos.current = { x: e.clientX, y: e.clientY, dx: bend.dx || 0, dy: bend.dy || 0 };
+    const onMove = (ev: MouseEvent) => {
       if (!startPos.current) return;
       const { x, y, dx, dy } = startPos.current;
-      const ndx = dx + (e.clientX - x) * 0.5; // dampen
-      const ndy = dy + (e.clientY - y) * 0.5;
+      const ndx = dx + (ev.clientX - x) * 0.5; // damped sensitivity
+      const ndy = dy + (ev.clientY - y) * 0.5;
       setBend(props.id, { dx: ndx, dy: ndy });
-    }
-    function onUp() {
+    };
+    const onUp = () => {
       startPos.current = null;
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
-    }
-    if (startPos.current) {
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
     };
-  }, [setBend, props.id]);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   return (
     <>
@@ -97,8 +93,9 @@ export function BundledEdge(props: EdgeProps) {
               color: labelText,
               border: `1px solid ${labelBorder}`,
               borderRadius: 6,
-              padding: '1px 5px',
-              fontSize: 10.5,
+              padding: '1px 4px',
+              fontSize: 9,
+              lineHeight: 1.05,
               whiteSpace: 'pre',
               boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
             }}
@@ -106,21 +103,18 @@ export function BundledEdge(props: EdgeProps) {
             {String(label)}
           </div>
           <div
-            onMouseDown={(e) => {
-              e.preventDefault();
-              startPos.current = { x: e.clientX, y: e.clientY, dx: bend.dx || 0, dy: bend.dy || 0 };
-            }}
-            title="Drag to bend"
+            onMouseDown={onHandleMouseDown}
+            title="Drag to adjust curve"
             style={{
               position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${lx + 16}px, ${ly - 16}px)`,
-              width: 10,
-              height: 10,
+              transform: `translate(-50%, -50%) translate(${lx + 12}px, ${ly - 14}px)`,
+              width: 8,
+              height: 8,
               borderRadius: 9999,
-              background: 'rgba(99,102,241,0.9)',
-              border: '1px solid rgba(99,102,241,0.8)',
+              background: '#fff',
+              border: '1px solid rgba(148,163,184,0.8)',
               cursor: 'grab',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
             }}
           />
         </EdgeLabelRenderer>
