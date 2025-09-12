@@ -98,12 +98,23 @@ function CanvasInner() {
         byBase.set(key, arr);
       }
       const decoupledEdges: Edge[] = [];
+      const slotMap: Record<number, number[]> = {
+        1: [0],
+        2: [-1, 1],
+        3: [-1, 0, 1],
+        4: [-2, -1, 1, 2],
+        5: [-2, -1, 0, 1, 2],
+        6: [-3, -2, -1, 1, 2, 3],
+        7: [-3, -2, -1, 0, 1, 2, 3],
+      };
       for (const [baseId, arr] of byBase.entries()) {
         const n = (arr as any[]).length;
-        // center around 0, step 14px
+        const slots = (slotMap as any)[n] || [-3, -2, -1, 0, 1, 2, 3];
+        // center around 0 for label offsets, step 14px
         const step = 14;
-        const start = -((n - 1) * step) / 2;
+        const start = -((Math.min(n, 7) - 1) * step) / 2;
         (arr as any[]).forEach((ge: any, idx: number) => {
+          const slot = slots[Math.min(idx, slots.length - 1)];
           const offsetY = start + idx * step;
           const mean = (ge as any).meanMs as number | undefined;
           const line1 = `(#${ge.count}/${meanDays(mean)})`;
@@ -114,10 +125,11 @@ function CanvasInner() {
             target: ge.target,
             type: 'default',
             label: `${line1}\n${line2}`,
-            labelStyle: { transform: `translateY(${offsetY}px)` },
+            labelStyle: { ...(labelText as any), transform: `translateY(${offsetY}px)` },
             labelShowBg: true,
             labelBgStyle: labelBg as any,
-            labelStyle: { ...(labelText as any), transform: `translateY(${offsetY}px)` },
+            sourceHandle: `s${slot}`,
+            targetHandle: `t${slot}`,
             style: { stroke: '#9ca3af', strokeWidth: widthFor(ge.count) },
             markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
             selectable: true,

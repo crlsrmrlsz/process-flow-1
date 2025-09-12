@@ -26,9 +26,26 @@ export const ProcessNode = memo(function ProcessNode({ id, data, selected }: Nod
           : 'bg-zinc-700/50 border-zinc-500 text-zinc-100 hover:bg-zinc-600/60 hover:border-zinc-400'
       } hover:border-2`}
     >
-      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      {/* Multiple hidden handles along top/bottom so parallel edges can anchor without overlapping */}
+      {[-3, -2, -1, 0, 1, 2, 3].map((slot) => (
+        <Handle
+          key={`t${slot}`}
+          id={`t${slot}`}
+          type="target"
+          position={Position.Top}
+          style={{ opacity: 0, left: `${50 + slot * 10}%`, transform: 'translateX(-50%)' }}
+        />
+      ))}
       {data.label}
-      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      {[-3, -2, -1, 0, 1, 2, 3].map((slot) => (
+        <Handle
+          key={`s${slot}`}
+          id={`s${slot}`}
+          type="source"
+          position={Position.Bottom}
+          style={{ opacity: 0, left: `${50 + slot * 10}%`, transform: 'translateX(-50%)' }}
+        />
+      ))}
     </div>
   );
 });
