@@ -24,12 +24,12 @@ export const ProcessNode = memo(function ProcessNode({ id, data }: NodeProps<Pro
       onKeyDown={onKeyDown}
       title={data?.title || data?.label}
       className={`focus-ring rounded-lg px-3 py-1.5 text-sm shadow-sm border transition-colors ${
-        isTerminal
-          ? 'bg-zinc-100 border-zinc-200 text-zinc-600'
-          : data?.active
+        data?.active
           ? 'bg-blue-50 border-blue-300 text-blue-900 cursor-pointer'
           : isHappy
           ? 'bg-green-50 border-green-400 text-zinc-900 cursor-pointer'
+          : isTerminal
+          ? 'bg-zinc-100 border-zinc-200 text-zinc-600'
           : 'bg-white border-zinc-200 text-zinc-900 hover:bg-zinc-50 hover:border-zinc-300 cursor-pointer'
       }`}
     >
