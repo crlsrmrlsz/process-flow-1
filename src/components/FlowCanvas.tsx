@@ -115,11 +115,12 @@ function CanvasInner() {
         // keep nodes non-animated to reduce noise
       }));
     // Systematic width mapping based on counts (visible scope)
-    const minW = 1.0;
-    const maxW = 5.0;
-    const widthFor = (count: number, minC: number, maxC: number) => {
-      if (maxC <= minC) return minW;
-      const t = Math.sqrt((count - minC) / Math.max(1, maxC - minC));
+    const minW = 2.0;
+    const maxW = 3.2;
+    const widthForLog = (count: number, minLog: number, maxLog: number) => {
+      const v = Math.log10(Math.max(1, count));
+      if (maxLog <= minLog) return (minW + maxW) / 2;
+      const t = (v - minLog) / (maxLog - minLog);
       return minW + t * (maxW - minW);
     };
     // Five-category performance color mapping based on expected vs actual
@@ -204,8 +205,9 @@ function CanvasInner() {
         ...baseEdgesRaw.map((be: any) => be.e.count as number),
         ...visibleGroups.map((ge: any) => ge.count as number),
       ];
-      const minC = counts.length ? Math.min(...counts) : 1;
-      const maxC = counts.length ? Math.max(...counts) : 1;
+      const logs = counts.length ? counts.map((c) => Math.log10(Math.max(1, c))) : [0];
+      const minLog = Math.min(...logs);
+      const maxLog = Math.max(...logs);
       const decoupledEdges: Edge[] = [];
       for (const [, arr] of byBase.entries()) {
         const n = (arr as any[]).length;
@@ -223,7 +225,7 @@ function CanvasInner() {
             data: { idx, count: n },
             sourceHandle: 's0',
             targetHandle: 't0',
-            style: { stroke: col, strokeWidth: widthFor(ge.count, minC, maxC) },
+            style: { stroke: col, strokeWidth: widthForLog(ge.count, minLog, maxLog) },
             markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 11, height: 11, orient: 'auto' },
             interactionWidth: 24,
           });
@@ -240,7 +242,7 @@ function CanvasInner() {
           data: { idx: 0, count: 1, isBase: true },
           label: be.label,
           labelStyle: labelText as any,
-          style: { stroke: col, strokeWidth: widthFor(be.e.count, minC, maxC) },
+          style: { stroke: col, strokeWidth: widthForLog(be.e.count, minLog, maxLog) },
           markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 11, height: 11, orient: 'auto' },
           interactionWidth: 24,
         } as Edge;
@@ -249,8 +251,9 @@ function CanvasInner() {
     }
     // No decouple overlay: compute min/max counts only on base edges
     const counts = baseEdgesRaw.map((be: any) => be.e.count as number);
-    const minC = counts.length ? Math.min(...counts) : 1;
-    const maxC = counts.length ? Math.max(...counts) : 1;
+    const logs = counts.length ? counts.map((c) => Math.log10(Math.max(1, c))) : [0];
+    const minLog = Math.min(...logs);
+    const maxLog = Math.max(...logs);
     const edges: Edge[] = [
       ...overlayUnderEdges,
       ...baseEdgesRaw.map((be) => {
@@ -263,7 +266,7 @@ function CanvasInner() {
         data: { idx: 0, count: 1, isBase: true },
         label: be.label,
         labelStyle: labelText as any,
-        style: { stroke: col, strokeWidth: widthFor(be.e.count, minC, maxC) },
+        style: { stroke: col, strokeWidth: widthForLog(be.e.count, minLog, maxLog) },
         markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 11, height: 11, orient: 'auto' },
         interactionWidth: 24,
       } as Edge;
