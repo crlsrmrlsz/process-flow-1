@@ -134,16 +134,12 @@ function CanvasInner() {
       if (r <= 1.4) return '#fcd34d'; // slower (amber-300)
       return '#f87171'; // much slower (red-400)
     };
-    const meanDays = (ms?: number) => {
-      if (!ms || ms <= 0) return '0d';
-      const days = ms / (24 * 60 * 60 * 1000);
-      return `${Math.round(days)}d`;
-    };
-    const labelText = { fill: '#111827', fontSize: 10 } as const; // dark text
+    // no-op: days helper removed; using numeric labels and tooltips
+    const labelText = { fill: '#111827', fontSize: 11 } as const; // dark text
     // Build base edges; colors/thickness computed after we know min/max counts in scope
     let baseEdgesRaw = graph.edges
       .filter((e) => visibleEdges.has(e.id))
-      .map((e) => ({ e, id: e.id, source: e.source, target: e.target, label: `(#${e.count}/${meanDays(e.meanMs)})` }));
+      .map((e) => ({ e, id: e.id, source: e.source, target: e.target, label: String(e.count) }));
 
     // Happy path overlay edges (underlay: light gray, overlay: darker accent)
     const overlayUnderEdges: Edge[] = (() => {
@@ -213,15 +209,13 @@ function CanvasInner() {
         const n = (arr as any[]).length;
         (arr as any[]).forEach((ge: any, idx: number) => {
           const mean = (ge as any).meanMs as number | undefined;
-          const line1 = `(#${ge.count}/${meanDays(mean)})`;
-          const line2 = `👤 ${ge.groupKey}`;
           const col = perfColor(mean, expectedMins[ge.source]);
           decoupledEdges.push({
             id: ge.id,
             source: ge.source,
             target: ge.target,
             type: 'bundled',
-            label: `${line1}\n${line2}`,
+            label: String(ge.count),
             data: { idx, count: n },
             sourceHandle: 's0',
             targetHandle: 't0',
@@ -305,12 +299,14 @@ function CanvasInner() {
     openCtxMenu({ type: 'edge', id: ed.id }, { x: e.clientX, y: e.clientY });
   }, [openCtxMenu]);
 
-  const formatMs = (ms: number | undefined) => {
+  const fmtMs = (ms: number | undefined) => {
     if (!ms || ms <= 0) return 'n/a';
-    const mins = ms / 60000;
-    if (mins < 60) return `${mins.toFixed(1)} min`;
-    const hrs = mins / 60;
-    return `${hrs.toFixed(1)} h`;
+    const m = Math.round(ms / 60000);
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    if (h <= 0) return `${mm}m`;
+    if (mm === 0) return `${h}h`;
+    return `${h}h ${mm}m`;
   };
 
   const onEdgeMouseEnter = useCallback((e: React.MouseEvent, ed: Edge) => {
@@ -322,19 +318,21 @@ function CanvasInner() {
     if (graph) {
       const base = graph.edges.find((x) => x.id === edgeId);
       if (base) {
-        text = `mean ${formatMs(base.meanMs)} • p90 ${formatMs(base.p90Ms)}`;
+        const expMin = expectedMins[srcId];
+        text = `expected ${expMin ? `${Math.round(expMin)}m` : 'n/a'} • mean ${fmtMs(base.meanMs)} • p90 ${fmtMs(base.p90Ms)}`;
       } else if (decoupleView) {
         const d = decoupleView.groupEdges.find((ge) => ge.id === edgeId);
         if (d) {
           const durs = d.traversals.map((t: any) => t.durationMs).sort((a: number, b: number) => a - b);
           const mean = durs.length ? durs.reduce((a: number, b: number) => a + b, 0) / durs.length : 0;
           const p90 = durs.length ? durs[Math.ceil(0.9 * durs.length) - 1] : 0;
-          text = `mean ${formatMs(mean)} • p90 ${formatMs(p90)}`;
+          const expMin = expectedMins[srcId];
+          text = `expected ${expMin ? `${Math.round(expMin)}m` : 'n/a'} • mean ${fmtMs(mean)} • p90 ${fmtMs(p90)} • person ${d.groupKey}`;
         }
       }
     }
     setHover({ x: e.clientX, y: e.clientY }, text || `${srcId}→${tgtId}`);
-  }, [graph, decoupleView, setHover]);
+  }, [graph, decoupleView, setHover, expectedMins]);
 
   const onEdgeMouseMove = useCallback((e: React.MouseEvent) => {
     setHover({ x: e.clientX, y: e.clientY }, useFlowStore.getState().hover?.text || '');

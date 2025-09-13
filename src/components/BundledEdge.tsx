@@ -53,7 +53,7 @@ export function BundledEdge(props: EdgeProps) {
   const clampedIdx = Math.max(0, Math.min(tList.length - 1, idx));
   const t = tList[clampedIdx];
   const baseLx = cubicAt(t, sourceX, c1x, c2x, targetX);
-  const baseLy = cubicAt(t, sourceY, c1y, c2y, targetY) - 10; // lift above curve
+  const baseLy = cubicAt(t, sourceY, c1y, c2y, targetY) - 14; // lift above curve a bit more
   // Extra horizontal spread for labels to avoid overlap
   const labelSpread = 110;
   const lx = baseLx + lane * labelSpread;
