@@ -48,6 +48,7 @@ type FlowState = {
   setEdgeBend: (edgeId: string, bend: { dx: number; dy: number }) => void;
   resetEdgeBend: (edgeId: string) => void;
   setActiveVariant: (id: string | null) => void;
+  setShowHappyPath: (val: boolean) => void;
 };
 
 export const useFlowStore = create<FlowState>((set, get) => ({
@@ -119,9 +120,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
             }
             const loaded = (await tryBase('permit.prod')) || (await tryBase('permit.small'));
             if (loaded) {
-              const [graphPre, eventsRaw] = loaded as any;
-              const graphPre = (await gRes.json()) as Graph;
-              const eventsRaw = (await eRes.json()) as any[];
+              const [graphPre, eventsRaw] = loaded as [Graph, any[]];
               const events = normalizeEvents(eventsRaw);
               const graph = needsStartRebuild(graphPre) ? buildGraph(events) : graphPre;
               const layout = computeLayout(graph, [START_NODE_ID]);

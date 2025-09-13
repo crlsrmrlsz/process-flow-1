@@ -180,15 +180,6 @@ function CanvasInner() {
       const decoupledEdges: Edge[] = [];
       for (const [, arr] of byBase.entries()) {
         const n = (arr as any[]).length;
-        // Compute local min/max meanMs for this base edge only
-        const means = (arr as any[]).map((ge: any) => (ge.meanMs as number) || 0).filter((m: number) => m > 0);
-        const minMs = means.length ? Math.min(...means) : 0;
-        const maxMs = means.length ? Math.max(...means) : 1;
-        const to01Local = (ms?: number) => {
-          if (!ms || ms <= 0) return 0.5; // neutral when unknown
-          if (maxMs <= minMs) return 0.5; // degenerate range -> midpoint
-          return Math.max(0, Math.min(1, (ms - minMs) / (maxMs - minMs)));
-        };
         (arr as any[]).forEach((ge: any, idx: number) => {
           const mean = (ge as any).meanMs as number | undefined;
           const line1 = `(#${ge.count}/${meanDays(mean)})`;

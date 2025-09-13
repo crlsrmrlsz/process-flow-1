@@ -88,7 +88,8 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Install browser: `npx playwright install chromium`.
   - Linux: `sudo npx playwright install-deps chromium` if the browser won’t launch.
   - Run: `npm run test:e2e` (starts dev server via Playwright config).
-  - Smoke test asserts DOM edges exist; screenshot tests capture context menu, decouple/undo/reset, and edge bending.
+  - Always run the visual screenshot tests and review the resulting images to validate routing, labels, badges, and color/width mapping.
+  - Smoke test asserts DOM edges exist; screenshot tests capture context menu, decouple/undo/reset, edge bending, and happy‑path overlay.
  - Visual verification (always): review `test-results/*.png` after UI/layout changes to confirm arrows, labels, spacing, and color mapping render correctly.
 
 ## Repository Etiquette
@@ -101,6 +102,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
 - PRs: keep them small and focused. Include what/why, and screenshots/gifs when UI changes.
 - Merge strategy: prefer “Squash and merge” to keep history tidy.
 - Rebase vs merge in branches: rebase locally for clean history if comfortable; otherwise merge is fine. Avoid large, long‑lived branches.
+ - Commit and push every change related to spec, generator, datasets, and visuals as you iterate so reviewers can track progress and reproduce outputs.
 
 ## Developer Environment Setup
 - Node.js: 18.x or 20.x recommended (use `nvm` if you can).
