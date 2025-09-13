@@ -27,7 +27,14 @@ Note: Playwright may require `npx playwright install chromium` to download brows
 - `src/components` – Flow canvas, context menu, custom node, decoupled edge, variants panel, legend
 - `src/state` – Zustand store (graph, layout, expanded, selection, decouple layers, variants)
 - `src/lib` – pure utilities: event‑log → graph, visibility, layout, stats, traces, friendly labels
-- `src/data/sampleEvents.ts` – small synthetic event log
+
+## Data
+- Single source dataset: `public/data/permit.prod.*`
+  - `public/data/permit.prod.events.json` — normalized event log array
+  - `public/data/permit.prod.graph.json` — precomputed graph with traversals and stats
+- Generate and precompute from the canonical definition:
+  - Generate: `node scripts/generate_from_definition.mjs --def docs/process.definition.json --out data/permit.prod.events --cases 10000 --temperature 0.8`
+  - Precompute: `node scripts/precompute_graph.mjs --in data/permit.prod.events.jsonl --outdir public/data --name permit.prod`
 
 ## Data Model
 Event schema:
@@ -49,4 +56,4 @@ We derive a directed graph with a synthetic `START` node, transitions per consec
 ## Notes
 - Layout is a simple BFS layering from START; diagram auto‑fits on changes and resizes.
 - MiniMap is omitted; React Flow `Controls` are shown.
-- Precomputed data is read from `public/data` when available; otherwise falls back to bundled sample events.
+- App loads only `public/data/permit.prod.*`. There are no fallbacks.
