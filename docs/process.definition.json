@@ -1,0 +1,98 @@
+{
+  "process": {
+    "name": "Restaurant Operating Permit",
+    "description": "End-to-end permitting for restaurant operation, simplified with post-approval consolidation."
+  },
+  "states": [
+    { "id": "APP_SUBMIT", "name": "Application Submission", "description": "Applicant submits the permit application.", "exceptional": false, "expected": { "mean_mins": 15, "std_mins": 5 },
+      "workers": [
+        { "name": "Ava (Intake)", "role": "Intake", "share": 60, "speed_factor": 1.0 },
+        { "name": "Liam (Intake)", "role": "Intake", "share": 40, "speed_factor": 0.9 }
+      ]
+    },
+    { "id": "INITIAL_REVIEW", "name": "Initial Review", "description": "Basic completeness and eligibility check.", "exceptional": false, "expected": { "mean_mins": 45, "std_mins": 20 },
+      "workers": [
+        { "name": "Mia (Processing)", "role": "Processing", "share": 70, "speed_factor": 1.0 },
+        { "name": "Ethan (Processing)", "role": "Processing", "share": 30, "speed_factor": 1.4 }
+      ]
+    },
+    { "id": "REQ_CHECK", "name": "Requirements Check", "description": "Verify documents and prerequisites.", "exceptional": false, "expected": { "mean_mins": 120, "std_mins": 60 },
+      "workers": [
+        { "name": "Mia (Processing)", "role": "Processing", "share": 50, "speed_factor": 0.9 },
+        { "name": "Ethan (Processing)", "role": "Processing", "share": 50, "speed_factor": 1.3 }
+      ]
+    },
+    { "id": "INFO_REQUEST", "name": "Information Request", "description": "Agency asks the applicant for more information.", "exceptional": true, "expected": { "mean_mins": 30, "std_mins": 15 },
+      "workers": [
+        { "name": "Mia (Processing)", "role": "Processing", "share": 60, "speed_factor": 1.0 },
+        { "name": "Ethan (Processing)", "role": "Processing", "share": 40, "speed_factor": 1.2 }
+      ]
+    },
+    { "id": "APPLICANT_RESPONSE", "name": "Applicant Response", "description": "Applicant submits updated information.", "exceptional": true, "expected": { "mean_mins": 240, "std_mins": 120 },
+      "workers": [
+        { "name": "Applicant", "role": "Applicant", "share": 100, "speed_factor": 1.0 }
+      ]
+    },
+    { "id": "HEALTH_INSPECTION", "name": "Health Inspection", "description": "On-site health inspection of the premises.", "exceptional": false, "expected": { "mean_mins": 180, "std_mins": 90 },
+      "workers": [
+        { "name": "Noah (Inspection)", "role": "Inspection", "share": 50, "speed_factor": 0.85 },
+        { "name": "Emma (Inspection)", "role": "Inspection", "share": 50, "speed_factor": 1.15 }
+      ]
+    },
+    { "id": "MANAGER_APPROVAL", "name": "Manager Approval", "description": "Manager review for special cases.", "exceptional": true, "expected": { "mean_mins": 60, "std_mins": 30 },
+      "workers": [
+        { "name": "Oliver (Manager)", "role": "Manager", "share": 100, "speed_factor": 1.1 }
+      ]
+    },
+    { "id": "APPROVED", "name": "Approved", "description": "Permit approved.", "exceptional": false, "expected": { "mean_mins": 0, "std_mins": 0 },
+      "workers": [ { "name": "System", "role": "System", "share": 100, "speed_factor": 1.0 } ]
+    },
+    { "id": "REJECTED", "name": "Rejected", "description": "Permit rejected.", "exceptional": true, "expected": { "mean_mins": 0, "std_mins": 0 },
+      "workers": [ { "name": "System", "role": "System", "share": 100, "speed_factor": 1.0 } ]
+    },
+    { "id": "PERMIT_REGISTERED", "name": "Permit Registered", "description": "Register permit in administration records (consulted online).", "exceptional": false, "expected": { "mean_mins": 10, "std_mins": 5 },
+      "workers": [ { "name": "System", "role": "System", "share": 100, "speed_factor": 1.0 } ]
+    },
+    { "id": "PLACARD_ISSUED", "name": "Placard Issued (QR)", "description": "Generate and issue placard with QR for pickup (outside flow).", "exceptional": false, "expected": { "mean_mins": 0, "std_mins": 0 },
+      "workers": [ { "name": "System", "role": "System", "share": 100, "speed_factor": 1.0 } ]
+    }
+  ],
+  "transitions": [
+    { "from": "APP_SUBMIT", "to": "INITIAL_REVIEW", "condition": "always" },
+    { "from": "INITIAL_REVIEW", "to": "REQ_CHECK", "condition": "always" },
+    { "from": "REQ_CHECK", "to": "HEALTH_INSPECTION", "condition": "documents OK" },
+    { "from": "REQ_CHECK", "to": "INFO_REQUEST", "condition": "needs more info" },
+    { "from": "INFO_REQUEST", "to": "APPLICANT_RESPONSE", "condition": "request sent" },
+    { "from": "APPLICANT_RESPONSE", "to": "REQ_CHECK", "condition": "response received" },
+    { "from": "HEALTH_INSPECTION", "to": "APPROVED", "condition": "pass" },
+    { "from": "HEALTH_INSPECTION", "to": "MANAGER_APPROVAL", "condition": "special case" },
+    { "from": "MANAGER_APPROVAL", "to": "APPROVED", "condition": "approved" },
+    { "from": "HEALTH_INSPECTION", "to": "REJECTED", "condition": "fail" },
+    { "from": "APPROVED", "to": "PERMIT_REGISTERED", "condition": "always" },
+    { "from": "PERMIT_REGISTERED", "to": "PLACARD_ISSUED", "condition": "always" }
+  ],
+  "variants": [
+    { "id": "happy_path", "name": "Happy Path", "percent": 55,
+      "path": ["APP_SUBMIT","INITIAL_REVIEW","REQ_CHECK","HEALTH_INSPECTION","APPROVED","PERMIT_REGISTERED","PLACARD_ISSUED"] },
+    { "id": "info_loop_once", "name": "One Info Request", "percent": 20,
+      "path": ["APP_SUBMIT","INITIAL_REVIEW","REQ_CHECK","INFO_REQUEST","APPLICANT_RESPONSE","REQ_CHECK","HEALTH_INSPECTION","APPROVED","PERMIT_REGISTERED","PLACARD_ISSUED"] },
+    { "id": "manager_approval", "name": "Manager Approval", "percent": 15,
+      "path": ["APP_SUBMIT","INITIAL_REVIEW","REQ_CHECK","HEALTH_INSPECTION","MANAGER_APPROVAL","APPROVED","PERMIT_REGISTERED","PLACARD_ISSUED"] },
+    { "id": "info_loop_twice", "name": "Two Info Requests", "percent": 7,
+      "path": ["APP_SUBMIT","INITIAL_REVIEW","REQ_CHECK","INFO_REQUEST","APPLICANT_RESPONSE","REQ_CHECK","INFO_REQUEST","APPLICANT_RESPONSE","REQ_CHECK","HEALTH_INSPECTION","APPROVED","PERMIT_REGISTERED","PLACARD_ISSUED"] },
+    { "id": "inspection_reject", "name": "Inspection Rejection", "percent": 3,
+      "path": ["APP_SUBMIT","INITIAL_REVIEW","REQ_CHECK","HEALTH_INSPECTION","REJECTED"] }
+  ],
+  "happy_path": ["APP_SUBMIT","INITIAL_REVIEW","REQ_CHECK","HEALTH_INSPECTION","APPROVED","PERMIT_REGISTERED","PLACARD_ISSUED"],
+  "data_generation": {
+    "cases": 500,
+    "seed": 42,
+    "temperature": 0.7,
+    "noise": { "time_sigma": 0.25 },
+    "exceptional_rates": {
+      "info_request_extra": 0.15,
+      "manager_approval_extra": 0.05
+    }
+  }
+}
+
