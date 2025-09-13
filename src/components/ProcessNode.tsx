@@ -29,7 +29,7 @@ export const ProcessNode = memo(function ProcessNode({ id, data }: NodeProps<Pro
           : data?.active
           ? 'bg-blue-50 border-blue-300 text-blue-900 cursor-pointer'
           : isHappy
-          ? 'bg-zinc-100 border-zinc-400 text-zinc-900 cursor-pointer'
+          ? 'bg-indigo-50 border-indigo-400 text-zinc-900 cursor-pointer'
           : 'bg-white border-zinc-200 text-zinc-900 hover:bg-zinc-50 hover:border-zinc-300 cursor-pointer'
       }`}
     >

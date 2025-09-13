@@ -159,8 +159,8 @@ function CanvasInner() {
           target: tgt,
           type: 'bundled',
           data: { idx: 0, count: 1, isBase: true, isOverlay: true },
-          style: { stroke: '#d1d5db', strokeWidth: 2 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#d1d5db', width: 9, height: 9, orient: 'auto' },
+          style: { stroke: '#e5e7eb', strokeWidth: 2.2 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#e5e7eb', width: 9, height: 9, orient: 'auto' },
           interactionWidth: 0,
         } as Edge;
       });
@@ -179,8 +179,8 @@ function CanvasInner() {
           target: tgt,
           type: 'bundled',
           data: { idx: 0, count: 1, isBase: true, isOverlay: true },
-          style: { stroke: '#374151', strokeWidth: 1.8, opacity: 0.95 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#374151', width: 8, height: 8, orient: 'auto' },
+          style: { stroke: '#4338ca', strokeWidth: 2.4, opacity: 1 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#4338ca', width: 9, height: 9, orient: 'auto' },
           interactionWidth: 0,
         } as Edge;
       });
