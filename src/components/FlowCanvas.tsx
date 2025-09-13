@@ -319,7 +319,8 @@ function CanvasInner() {
       const base = graph.edges.find((x) => x.id === edgeId);
       if (base) {
         const expMin = expectedMins[srcId];
-        text = `expected ${expMin ? `${Math.round(expMin)}m` : 'n/a'} • mean ${fmtMs(base.meanMs)} • p90 ${fmtMs(base.p90Ms)}`;
+        const expFmt = expMin != null ? fmtMs(expMin * 60_000) : 'n/a';
+        text = `expected ${expFmt} • mean ${fmtMs(base.meanMs)} • p90 ${fmtMs(base.p90Ms)}`;
       } else if (decoupleView) {
         const d = decoupleView.groupEdges.find((ge) => ge.id === edgeId);
         if (d) {
@@ -327,7 +328,8 @@ function CanvasInner() {
           const mean = durs.length ? durs.reduce((a: number, b: number) => a + b, 0) / durs.length : 0;
           const p90 = durs.length ? durs[Math.ceil(0.9 * durs.length) - 1] : 0;
           const expMin = expectedMins[srcId];
-          text = `expected ${expMin ? `${Math.round(expMin)}m` : 'n/a'} • mean ${fmtMs(mean)} • p90 ${fmtMs(p90)} • person ${d.groupKey}`;
+          const expFmt = expMin != null ? fmtMs(expMin * 60_000) : 'n/a';
+          text = `expected ${expFmt} • mean ${fmtMs(mean)} • p90 ${fmtMs(p90)} • person ${d.groupKey}`;
         }
       }
     }
