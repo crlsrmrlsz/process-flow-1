@@ -16,6 +16,7 @@ import { useFlowStore } from '@/state/store';
 import { ProcessNode } from './ProcessNode';
 import { BundledEdge } from './BundledEdge';
 import { START_NODE_ID } from '@/lib/graph';
+import { friendlyName, truncateLabel } from '@/lib/friendly';
 
 const nodeTypes = { process: ProcessNode } as const;
 const edgeTypes = { bundled: BundledEdge } as const;
@@ -26,25 +27,74 @@ function CanvasInner() {
   const getVisible = useFlowStore((s) => s.getVisible);
   const selection = useFlowStore((s) => s.selection);
   const expanded = useFlowStore((s) => s.expanded);
+  const events = useFlowStore((s) => s.events);
   const setSelection = useFlowStore((s) => s.setSelection);
   const expandNode = useFlowStore((s) => s.expandNode);
   const { fitView } = useReactFlow();
   const setNodePosition = useFlowStore((s) => s.setNodePosition);
   const openCtxMenu = useFlowStore((s) => s.openCtxMenu);
   const decoupleView = useFlowStore((s) => s.decoupleView);
+  const activeVariantId = useFlowStore((s) => s.activeVariantId);
   const setHover = useFlowStore((s) => s.setHover);
   const clearHover = useFlowStore((s) => s.clearHover);
+  const expectedMins = useFlowStore((s) => s.expectedMins);
 
   const { nodes, edges } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[] };
-    const { visibleEdges, visibleNodes } = getVisible();
+    const { visibleEdges, visibleNodes, terminals } = getVisible();
+
+    // Compute terminal stats: per terminal node, count of cases reaching it and mean time-to-reach
+    const termInfo: Record<string, { cases: number; meanMs: number }> = {};
+    if (terminals.size > 0 && events.length > 0) {
+      const by = new Map<string, { activity: string; timestamp: string }[]>();
+      for (const e of events) {
+        const arr = by.get(e.caseId) || [];
+        arr.push({ activity: e.activity, timestamp: e.timestamp });
+        by.set(e.caseId, arr);
+      }
+      for (const arr of by.values()) arr.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      for (const arr of by.values()) {
+        if (arr.length === 0) continue;
+        const start = new Date(arr[0].timestamp).getTime();
+        const seen = new Set<string>();
+        for (const ev of arr) {
+          if (!terminals.has(ev.activity) || seen.has(ev.activity)) continue;
+          const dt = new Date(ev.timestamp).getTime() - start;
+          const cur = termInfo[ev.activity] || { cases: 0, meanMs: 0 };
+          const nextCases = cur.cases + 1;
+          const nextMean = cur.meanMs + (dt - cur.meanMs) / nextCases;
+          termInfo[ev.activity] = { cases: nextCases, meanMs: nextMean };
+          seen.add(ev.activity);
+        }
+      }
+    }
     const nodes: Node[] = graph.nodes
       .filter((n) => visibleNodes.has(n.id) || n.id === START_NODE_ID)
       .map((n) => ({
         id: n.id,
         type: 'process',
         position: layout[n.id] || { x: 0, y: 0 },
-        data: { label: n.label, active: selection?.type === 'node' && selection.id === n.id },
+        data: {
+          label: truncateLabel(friendlyName(n.id)),
+          title: friendlyName(n.id),
+          active: selection?.type === 'node' && selection.id === n.id,
+          terminalInfo: terminals.has(n.id)
+            ? (() => {
+                const st = termInfo[n.id];
+                if (!st || st.cases <= 0) return '0 cases';
+                const fmt = (ms: number) => {
+                  if (ms <= 0) return '0m';
+                  const mins = ms / 60000;
+                  if (mins < 60) return `${mins.toFixed(0)}m`;
+                  const hrs = mins / 60;
+                  if (hrs < 48) return `${hrs.toFixed(1)}h`;
+                  const days = hrs / 24;
+                  return `${days.toFixed(1)}d`;
+                };
+                return `${st.cases} cases • μ${fmt(st.meanMs)}`;
+              })()
+            : undefined,
+        },
         draggable: false,
         selectable: false,
         className: 'text-xs',
@@ -53,60 +103,39 @@ function CanvasInner() {
         targetPosition: Position.Top,
         // keep nodes non-animated to reduce noise
       }));
-    const globalMax = Math.max(1, ...graph.edges.map((e) => e.count));
-    const minW = 0.3; // thinnest possible while still visible
-    const maxW = 3.0; // upper bound for very high counts
-    const widthFor = (count: number) => {
-      if (globalMax <= 1) return minW;
-      const v = Math.log(count) / Math.log(globalMax); // 0..1
-      return minW + v * (maxW - minW);
+    // Systematic width mapping based on counts (visible scope)
+    const minW = 1.0;
+    const maxW = 5.0;
+    const widthFor = (count: number, minC: number, maxC: number) => {
+      if (maxC <= minC) return minW;
+      const t = Math.sqrt((count - minC) / Math.max(1, maxC - minC));
+      return minW + t * (maxW - minW);
     };
-    // Duration color scale (meanMs) across all edges: clamp between p10 and p90
-    const durs = graph.edges.map((e) => e.meanMs || 0).filter((x) => x > 0).sort((a, b) => a - b);
-    const q = (p: number) => (durs.length ? durs[Math.min(durs.length - 1, Math.max(0, Math.round(p * (durs.length - 1))))] : 0);
-    const lo = q(0.1), hi = Math.max(lo + 1, q(0.9));
-    const to01 = (ms?: number) => {
-      if (!ms || ms <= 0) return 0;
-      return Math.max(0, Math.min(1, (ms - lo) / (hi - lo)));
-    };
-    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-    const colorFor = (ms?: number) => {
-      const t = to01(ms);
-      // HSL: 210deg (blue) → 15deg (red)
-      const h = lerp(210, 15, t);
-      const s = 70;
-      const l = 60 - 10 * t;
-      return `hsl(${h} ${s}% ${l}%)`;
+    // Five-category performance color mapping based on expected vs actual
+    const perfColor = (actualMs?: number, expectedMin?: number) => {
+      if (!actualMs || !expectedMin || expectedMin <= 0) return '#9ca3af';
+      const r = actualMs / (expectedMin * 60_000);
+      if (r <= 0.7) return '#16a34a'; // much faster
+      if (r <= 0.9) return '#86efac'; // faster
+      if (r < 1.1) return '#9ca3af'; // normal
+      if (r <= 1.4) return '#f59e0b'; // slower
+      return '#dc2626'; // much slower
     };
     const meanDays = (ms?: number) => {
       if (!ms || ms <= 0) return '0d';
       const days = ms / (24 * 60 * 60 * 1000);
       return `${Math.round(days)}d`;
     };
-    const labelBg = { fill: '#F9FAFB', fillOpacity: 0.95, stroke: '#E5E7EB', strokeWidth: 1 } as const; // light bg
-    const labelText = { fill: '#111827', fontSize: 12 } as const; // dark text for contrast
-    // Build base edges
-    let baseEdges: Edge[] = graph.edges
+    const labelText = { fill: '#111827', fontSize: 10 } as const; // dark text
+    // Build base edges; colors/thickness computed after we know min/max counts in scope
+    let baseEdgesRaw = graph.edges
       .filter((e) => visibleEdges.has(e.id))
-      .map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        type: 'default',
-        label: `(#${e.count}/${meanDays(e.meanMs)})`,
-        labelShowBg: true,
-        labelBgStyle: labelBg as any,
-        labelStyle: { ...(labelText as any), fontSize: 10 },
-        style: { stroke: '#9ca3af', strokeWidth: widthFor(e.count) },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
-        selectable: true,
-        interactionWidth: 24,
-      }));
+      .map((e) => ({ e, id: e.id, source: e.source, target: e.target, label: `(#${e.count}/${meanDays(e.meanMs)})` }));
 
     // Overlay decoupled edges (person) replacing base edges only at decoupled nodes
     if (decoupleView) {
       const replaced = decoupleView.replacedEdgeIds;
-      baseEdges = baseEdges.filter((e) => !replaced.has(e.id));
+      baseEdgesRaw = baseEdgesRaw.filter((be) => !replaced.has(be.id));
       const visibleGroups = decoupleView.groupEdges.filter((ge) => visibleEdges.has(`${ge.source}__${ge.target}`));
       // Offset labels for multiple groups on same base edge to avoid overlap
       const byBase = new Map<string, typeof visibleGroups>();
@@ -116,22 +145,30 @@ function CanvasInner() {
         arr.push(ge);
         byBase.set(key, arr);
       }
+      // Compute min/max count across both base and decoupled edges in scope
+      const counts: number[] = [
+        ...baseEdgesRaw.map((be: any) => be.e.count as number),
+        ...visibleGroups.map((ge: any) => ge.count as number),
+      ];
+      const minC = counts.length ? Math.min(...counts) : 1;
+      const maxC = counts.length ? Math.max(...counts) : 1;
       const decoupledEdges: Edge[] = [];
-      const slotMap: Record<number, number[]> = {
-        1: [0],
-        2: [-1, 1],
-        3: [-1, 0, 1],
-        4: [-2, -1, 1, 2],
-        5: [-2, -1, 0, 1, 2],
-        6: [-3, -2, -1, 1, 2, 3],
-        7: [-3, -2, -1, 0, 1, 2, 3],
-      };
-      for (const [baseId, arr] of byBase.entries()) {
+      for (const [, arr] of byBase.entries()) {
         const n = (arr as any[]).length;
+        // Compute local min/max meanMs for this base edge only
+        const means = (arr as any[]).map((ge: any) => (ge.meanMs as number) || 0).filter((m: number) => m > 0);
+        const minMs = means.length ? Math.min(...means) : 0;
+        const maxMs = means.length ? Math.max(...means) : 1;
+        const to01Local = (ms?: number) => {
+          if (!ms || ms <= 0) return 0.5; // neutral when unknown
+          if (maxMs <= minMs) return 0.5; // degenerate range -> midpoint
+          return Math.max(0, Math.min(1, (ms - minMs) / (maxMs - minMs)));
+        };
         (arr as any[]).forEach((ge: any, idx: number) => {
           const mean = (ge as any).meanMs as number | undefined;
           const line1 = `(#${ge.count}/${meanDays(mean)})`;
           const line2 = `👤 ${ge.groupKey}`;
+          const col = perfColor(mean, expectedMins[ge.source]);
           decoupledEdges.push({
             id: ge.id,
             source: ge.source,
@@ -141,18 +178,51 @@ function CanvasInner() {
             data: { idx, count: n },
             sourceHandle: 's0',
             targetHandle: 't0',
-            style: { stroke: colorFor((ge as any).meanMs), strokeWidth: widthFor(ge.count) },
-            markerEnd: { type: MarkerType.ArrowClosed, color: colorFor((ge as any).meanMs) },
-            selectable: true,
+            style: { stroke: col, strokeWidth: widthFor(ge.count, minC, maxC) },
+            markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 11, height: 11, orient: 'auto' },
             interactionWidth: 24,
           });
         });
       }
+      // Finalize base edges with styles
+      const baseEdges: Edge[] = baseEdgesRaw.map((be) => {
+        const col = perfColor(be.e.meanMs, expectedMins[be.source]);
+        return {
+          id: be.id,
+          source: be.source,
+          target: be.target,
+          type: 'bundled',
+          data: { idx: 0, count: 1, isBase: true },
+          label: be.label,
+          labelStyle: labelText as any,
+          style: { stroke: col, strokeWidth: widthFor(be.e.count, minC, maxC) },
+          markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 11, height: 11, orient: 'auto' },
+          interactionWidth: 24,
+        } as Edge;
+      });
       return { nodes, edges: [...baseEdges, ...decoupledEdges] };
     }
-    const edges = baseEdges;
+    // No decouple overlay: compute min/max counts only on base edges
+    const counts = baseEdgesRaw.map((be: any) => be.e.count as number);
+    const minC = counts.length ? Math.min(...counts) : 1;
+    const maxC = counts.length ? Math.max(...counts) : 1;
+    const edges: Edge[] = baseEdgesRaw.map((be) => {
+      const col = perfColor(be.e.meanMs, expectedMins[be.source]);
+      return {
+        id: be.id,
+        source: be.source,
+        target: be.target,
+        type: 'bundled',
+        data: { idx: 0, count: 1, isBase: true },
+        label: be.label,
+        labelStyle: labelText as any,
+        style: { stroke: col, strokeWidth: widthFor(be.e.count, minC, maxC) },
+        markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 11, height: 11, orient: 'auto' },
+        interactionWidth: 24,
+      } as Edge;
+    });
     return { nodes, edges };
-  }, [graph, layout, getVisible, expanded, selection, decoupleView]);
+  }, [graph, layout, getVisible, expanded, selection, decoupleView, events.length, activeVariantId, expectedMins]);
 
   const onNodeClick = useCallback((_: unknown, n: Node) => {
     expandNode(n.id);
@@ -173,6 +243,8 @@ function CanvasInner() {
 
   const onNodeContextMenu = useCallback((e: React.MouseEvent, n: Node) => {
     e.preventDefault();
+    const { terminals } = useFlowStore.getState().getVisible();
+    if (terminals.has(n.id)) return; // disable menu for terminal nodes
     openCtxMenu({ type: 'node', id: n.id }, { x: e.clientX, y: e.clientY });
   }, [openCtxMenu]);
 
@@ -235,6 +307,26 @@ function CanvasInner() {
     return () => window.clearTimeout(id);
   }, [graph, nodes.length, edges.length, fitView]);
 
+  // Keep diagram centered on window resize
+  useEffect(() => {
+    if (!graph) return;
+    let timer: number | null = null;
+    const onResize = () => {
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        try {
+          fitView({ padding: 0.2, duration: 250 });
+        } catch {}
+        timer = null;
+      }, 120);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (timer != null) window.clearTimeout(timer);
+    };
+  }, [graph, fitView]);
+
   if (!graph) return <div className="h-full w-full" />;
 
   return (
@@ -259,7 +351,7 @@ function CanvasInner() {
         proOptions={{ hideAttribution: true }}
       >
         <Controls />
-        <Background color="#444" gap={24} />
+        <Background color="#e5e7eb" gap={24} />
       </ReactFlow>
     </div>
   );

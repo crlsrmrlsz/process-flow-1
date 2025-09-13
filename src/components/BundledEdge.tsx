@@ -1,5 +1,5 @@
 import { BaseEdge, EdgeLabelRenderer, type EdgeProps } from 'reactflow';
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { useFlowStore } from '@/state/store';
 
 function cubicAt(t: number, p0: number, p1: number, p2: number, p3: number) {
@@ -18,7 +18,9 @@ export function BundledEdge(props: EdgeProps) {
     markerEnd,
     label,
     data,
-  } = props as EdgeProps & { data?: { idx?: number; count?: number } };
+  } = props as EdgeProps & { data?: { idx?: number; count?: number; isBase?: boolean } };
+
+  const isBase = (props as any).data?.isBase === true;
 
   const idx = data?.idx ?? 0;
   const count = data?.count ?? 1;
@@ -34,9 +36,7 @@ export function BundledEdge(props: EdgeProps) {
   const c2y = targetY - dy + bend.dy;
   const path = `M ${sourceX},${sourceY} C ${c1x},${c1y} ${c2x},${c2y} ${targetX},${targetY}`;
 
-  // Label with light background for readability
-  const labelBg = 'rgba(249, 250, 251, 0.95)'; // gray-50
-  const labelBorder = '#E5E7EB'; // gray-200
+  // Label aesthetics: plain text, subtle shadow; no boxes
   const labelText = '#111827'; // gray-900
 
   // Choose label position along the curve based on lane index
@@ -59,10 +59,12 @@ export function BundledEdge(props: EdgeProps) {
   const lx = baseLx + lane * labelSpread;
   const ly = baseLy;
 
-  // Drag handle for manual bend adjustment
+  // Drag handle for manual bend adjustment (disabled for base edges)
   const startPos = useRef<{x:number;y:number;dx:number;dy:number}|null>(null);
-  const onHandleMouseDown = (e: React.MouseEvent) => {
+  const onDragStart = (e: React.MouseEvent) => {
+    if (isBase) return; // base edges are not draggable
     e.preventDefault();
+    e.stopPropagation();
     startPos.current = { x: e.clientX, y: e.clientY, dx: bend.dx || 0, dy: bend.dy || 0 };
     const onMove = (ev: MouseEvent) => {
       if (!startPos.current) return;
@@ -80,27 +82,60 @@ export function BundledEdge(props: EdgeProps) {
     window.addEventListener('mouseup', onUp);
   };
 
+  // Midpoint handle position along the curve for dragging
+  const th = 0.5;
+  const hx = cubicAt(th, sourceX, c1x, c2x, targetX);
+  const hy = cubicAt(th, sourceY, c1y, c2y, targetY);
+
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
+      {/* Draggable midpoint handle (decoupled only) */}
+      {!isBase && (
+        <EdgeLabelRenderer>
+          <div
+            title="Drag to bend"
+            onMouseDown={onDragStart}
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${hx}px, ${hy}px)`,
+              width: 5,
+              height: 5,
+              borderRadius: 999,
+              background: '#FFFFFF',
+              border: `1px solid #E5E7EB`,
+              boxShadow: '0 1px 1px rgba(0,0,0,0.10)',
+              cursor: 'grab',
+              zIndex: 5,
+              pointerEvents: 'all',
+              userSelect: 'none',
+            }}
+            className="nodrag nopan"
+            data-testid="edge-bend-handle"
+            data-edgeid={id}
+            data-dx={bend.dx || 0}
+            data-dy={bend.dy || 0}
+          />
+        </EdgeLabelRenderer>
+      )}
       {label ? (
         <EdgeLabelRenderer>
           <div
-            onMouseDown={onHandleMouseDown}
+            onMouseDown={onDragStart}
             style={{
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`,
-              background: labelBg,
               color: labelText,
-              border: `1px solid ${labelBorder}`,
-              borderRadius: 6,
-              padding: '0px 4px',
-              fontSize: 8.5,
+              padding: '0px 2px',
+              fontSize: 10,
               lineHeight: 1.0,
               whiteSpace: 'pre',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-              cursor: 'grab'
+              textShadow: '0 1px 0 rgba(255,255,255,0.85)',
+              cursor: isBase ? 'default' : 'grab',
+              pointerEvents: 'all',
+              userSelect: 'none',
             }}
+            className="nodrag nopan"
           >
             {String(label)}
           </div>
