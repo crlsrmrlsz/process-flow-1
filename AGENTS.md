@@ -10,7 +10,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
 - Layout: `src/lib/layout.ts` (`computeLayout`) does simple BFS layering from START.
 - Reveal: `src/lib/visible.ts` (`computeVisibleFromExpanded`) computes visibility from expanded nodes; START auto‑expands on load. Variants-based reveal supported via `src/lib/traces.ts`.
 - State: `src/state/store.ts` (Zustand) — `graph`, `layout`, `expanded`, `selection`, `variants`, `activeVariantId`, `decouples`, `decoupleView`, `getVisible()`, `setNodePosition()`; `init()` loads `permit.prod.*`, computes layout, and mines top variants.
-- UI: `src/components/FlowCanvas.tsx` (built‑in default edges + custom `BundledEdge` overlay, auto‑fit on changes, `Background`, `Controls`); `ProcessNode.tsx` (keyboard a11y + hidden handles); `ContextMenu.tsx` (Decouple/Undo, Collapse, Expand); `EdgeTooltip.tsx`; `LegendBar.tsx`; `VariantsPanel.tsx`; `HappyPathToggle.tsx`.
+- UI: `src/components/FlowCanvas.tsx` (built‑in default edges + custom `BundledEdge` overlay, auto‑fit on changes, `Controls`); `ProcessNode.tsx` (keyboard a11y + hidden handles); `ContextMenu.tsx` (Decouple/Undo, Collapse, Expand); `EdgeTooltip.tsx`; `LegendBar.tsx`; `VariantsPanel.tsx`; `HappyPathToggle.tsx`.
 - Tests: Unit in `src/lib/*.spec.ts` and `src/state/*.spec.ts`; E2E in `tests/*.spec.ts` (smoke + screenshots, dev server auto‑started by Playwright config).
 - Commands: `npm install`; dev `npm run dev`; unit `npm run test`; E2E `npx playwright install chromium` then `npm run test:e2e`; lint/format `npm run lint` / `npm run format`.
 - Gotchas: Base edges use built‑in rendering; decoupled overlays use a custom edge with its own label background. Auto‑fit uses `setTimeout(0)` after element updates; ensure label backgrounds remain readable on the light theme.
@@ -38,6 +38,9 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - First‑time: `npx playwright install chromium`
   - Linux deps: `sudo npx playwright install-deps chromium`
   - Run: `npm run test:e2e`
+ - Dataset (10k cases):
+   - Generate: `node scripts/generate_from_definition.mjs --def docs/process.definition.json --out data/permit.prod.events --cases 10000 --temperature 0.8`
+   - Precompute: `node scripts/precompute_graph.mjs --in data/permit.prod.events.jsonl --outdir public/data --name permit.prod`
 
 ## Core Files and Utilities
 - `src/components/FlowCanvas.tsx`
@@ -45,7 +48,7 @@ This file guides coding agents working in this repo. It explains how to run, tes
   - Base edges use `type: 'default'`; decoupled overlays use `edgeTypes.bundled` with curved bundling and draggable bend handle.
   - Auto‑fits on element changes (`fitView({ padding: 0.2 })`) and on window resize.
   - Vertical flow orientation (top → bottom): nodes set `sourcePosition: Bottom`, `targetPosition: Top`.
-  - Includes `Background` grid and `Controls`; right‑click opens context menu; hover shows edge tooltip.
+  - Includes `Controls`; right‑click opens context menu; hover shows edge tooltip.
   - Edge width scales subtly with count (log‑scaled); decoupled colors map duration (gentle green→red, relative per base edge).
 - `src/components/ProcessNode.tsx`
   - Custom node with keyboard a11y. Includes invisible left/right `Handle`s to ensure edge anchoring.
