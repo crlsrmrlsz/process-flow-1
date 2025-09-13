@@ -135,8 +135,8 @@ function CanvasInner() {
       .filter((e) => visibleEdges.has(e.id))
       .map((e) => ({ e, id: e.id, source: e.source, target: e.target, label: `(#${e.count}/${meanDays(e.meanMs)})` }));
 
-    // Happy path overlay edges (light gray, non-interactive)
-    const overlayEdges: Edge[] = (() => {
+    // Happy path overlay edges (underlay: light gray, overlay: darker accent)
+    const overlayUnderEdges: Edge[] = (() => {
       if (!showHappyPath || happyPath.length === 0) return [];
       const ids: string[] = [];
       if (happyPath.length > 0) ids.push(`${START_NODE_ID}__${happyPath[0]}`);
@@ -145,13 +145,33 @@ function CanvasInner() {
       return Array.from(set).map((id) => {
         const [src, tgt] = id.split('__');
         return {
-          id: `hp:${id}`,
+          id: `hpUnder:${id}`,
           source: src,
           target: tgt,
           type: 'bundled',
           data: { idx: 0, count: 1, isBase: true, isOverlay: true },
           style: { stroke: '#d1d5db', strokeWidth: 2 },
           markerEnd: { type: MarkerType.ArrowClosed, color: '#d1d5db', width: 9, height: 9, orient: 'auto' },
+          interactionWidth: 0,
+        } as Edge;
+      });
+    })();
+    const overlayTopEdges: Edge[] = (() => {
+      if (!showHappyPath || happyPath.length === 0) return [];
+      const ids: string[] = [];
+      if (happyPath.length > 0) ids.push(`${START_NODE_ID}__${happyPath[0]}`);
+      for (let i = 0; i < happyPath.length - 1; i++) ids.push(`${happyPath[i]}__${happyPath[i + 1]}`);
+      const set = new Set(ids);
+      return Array.from(set).map((id) => {
+        const [src, tgt] = id.split('__');
+        return {
+          id: `hpTop:${id}`,
+          source: src,
+          target: tgt,
+          type: 'bundled',
+          data: { idx: 0, count: 1, isBase: true, isOverlay: true },
+          style: { stroke: '#4b5563', strokeWidth: 1.5, opacity: 0.9 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563', width: 8, height: 8, orient: 'auto' },
           interactionWidth: 0,
         } as Edge;
       });
@@ -216,14 +236,14 @@ function CanvasInner() {
           interactionWidth: 24,
         } as Edge;
       });
-      return { nodes, edges: [...overlayEdges, ...baseEdges, ...decoupledEdges] };
+      return { nodes, edges: [...overlayUnderEdges, ...baseEdges, ...decoupledEdges, ...overlayTopEdges] };
     }
     // No decouple overlay: compute min/max counts only on base edges
     const counts = baseEdgesRaw.map((be: any) => be.e.count as number);
     const minC = counts.length ? Math.min(...counts) : 1;
     const maxC = counts.length ? Math.max(...counts) : 1;
     const edges: Edge[] = [
-      ...overlayEdges,
+      ...overlayUnderEdges,
       ...baseEdgesRaw.map((be) => {
       const col = perfColor(be.e.meanMs, expectedMins[be.source]);
       return {
@@ -238,7 +258,9 @@ function CanvasInner() {
         markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 11, height: 11, orient: 'auto' },
         interactionWidth: 24,
       } as Edge;
-    })];
+    }),
+      ...overlayTopEdges,
+    ];
     return { nodes, edges };
   }, [graph, layout, getVisible, expanded, selection, decoupleView, events.length, activeVariantId, expectedMins, showHappyPath, happyPath.join('|')]);
 
