@@ -179,8 +179,8 @@ function CanvasInner() {
           target: tgt,
           type: 'bundled',
           data: { idx: 0, count: 1, isBase: true, isOverlay: true },
-          style: { stroke: '#4338ca', strokeWidth: 2.4, opacity: 1 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#4338ca', width: 9, height: 9, orient: 'auto' },
+          style: { stroke: '#15803d', strokeWidth: 2.4, opacity: 1 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#15803d', width: 9, height: 9, orient: 'auto' },
           interactionWidth: 0,
         } as Edge;
       });
