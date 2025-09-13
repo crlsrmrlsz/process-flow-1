@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { sampleEvents } from '@/data/sampleEvents';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { EventLogEvent } from '@/types';
 import { buildGraph } from './graph';
 import { computeVisible, maxDepth } from './step';
 
 describe('step filter', () => {
-  const g = buildGraph(sampleEvents);
+  const events: EventLogEvent[] = JSON.parse(
+    fs.readFileSync(path.resolve(process.cwd(), 'public/data/permit.prod.events.json'), 'utf8'),
+  );
+  const g = buildGraph(events);
   const m = maxDepth(g);
 
   it('reveals nothing at step 0 (only START node)', () => {

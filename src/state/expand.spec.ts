@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { EventLogEvent } from '@/types';
 import { useFlowStore } from './store';
 import { buildGraph } from '@/lib/graph';
-import { sampleEvents } from '@/data/sampleEvents';
 
 describe('expanded visibility actions', () => {
   beforeEach(() => {
-    const graph = buildGraph(sampleEvents);
+    const events: EventLogEvent[] = JSON.parse(
+      fs.readFileSync(path.resolve(process.cwd(), 'public/data/permit.prod.events.json'), 'utf8'),
+    );
+    const graph = buildGraph(events);
     useFlowStore.setState({ graph, expanded: new Set() });
   });
 
@@ -27,4 +32,3 @@ describe('expanded visibility actions', () => {
     expect(useFlowStore.getState().expanded.size).toBe(0);
   });
 });
-

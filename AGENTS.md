@@ -5,20 +5,26 @@ This file guides coding agents working in this repo. It explains how to run, tes
 ## Agent Quickstart
 - Overview: Minimal Process Flow Explorer with click‑to‑expand reveal from START and a single central canvas. Base rendering uses built‑in React Flow edges; decoupled overlays use a custom bundled edge with labels and arrowheads. MiniMap intentionally removed.
 - Tech: Vite + React + TypeScript; React Flow; Zustand; Tailwind; Vitest (unit) + Playwright (E2E). Node 18/20 recommended.
-- Data: In‑memory synthetic events at `src/data/sampleEvents.ts`. Optional precomputed files at `public/data/permit.small.*.json`.
+- Data: Single source — precomputed `public/data/permit.prod.*.json` generated from `docs/process.definition.json`. No fallbacks.
 - Graph build: `src/lib/graph.ts` (`buildGraph`, `START_NODE_ID`). Nodes = activities + synthetic START. Edges = START → first activity per case + consecutive same‑case transitions; each edge has `count` and `traversals { caseId, startTs, endTs, durationMs }` plus derived stats (`meanMs`, `p90Ms`, …).
 - Layout: `src/lib/layout.ts` (`computeLayout`) does simple BFS layering from START.
 - Reveal: `src/lib/visible.ts` (`computeVisibleFromExpanded`) computes visibility from expanded nodes; START auto‑expands on load. Variants-based reveal supported via `src/lib/traces.ts`.
-- State: `src/state/store.ts` (Zustand) — `graph`, `layout`, `expanded`, `selection`, `variants`, `activeVariantId`, `decouples`, `decoupleView`, `getVisible()`, `setNodePosition()`; `init()` wires sample/precomputed data + layout and mines top variants.
-- UI: `src/components/FlowCanvas.tsx` (built‑in default edges + custom `BundledEdge` overlay, auto‑fit on changes, `Background`, `Controls`); `ProcessNode.tsx` (keyboard a11y + hidden handles); `ContextMenu.tsx` (Decouple/Undo, Collapse, Expand); `EdgeTooltip.tsx`; `LegendBar.tsx`; `VariantsPanel.tsx`.
+- State: `src/state/store.ts` (Zustand) — `graph`, `layout`, `expanded`, `selection`, `variants`, `activeVariantId`, `decouples`, `decoupleView`, `getVisible()`, `setNodePosition()`; `init()` loads `permit.prod.*`, computes layout, and mines top variants.
+- UI: `src/components/FlowCanvas.tsx` (built‑in default edges + custom `BundledEdge` overlay, auto‑fit on changes, `Background`, `Controls`); `ProcessNode.tsx` (keyboard a11y + hidden handles); `ContextMenu.tsx` (Decouple/Undo, Collapse, Expand); `EdgeTooltip.tsx`; `LegendBar.tsx`; `VariantsPanel.tsx`; `HappyPathToggle.tsx`.
 - Tests: Unit in `src/lib/*.spec.ts` and `src/state/*.spec.ts`; E2E in `tests/*.spec.ts` (smoke + screenshots, dev server auto‑started by Playwright config).
 - Commands: `npm install`; dev `npm run dev`; unit `npm run test`; E2E `npx playwright install chromium` then `npm run test:e2e`; lint/format `npm run lint` / `npm run format`.
 - Gotchas: Base edges use built‑in rendering; decoupled overlays use a custom edge with its own label background. Auto‑fit uses `setTimeout(0)` after element updates; ensure label backgrounds remain readable on the light theme.
 
-- Minimal web app to explore a process graph by clicking nodes to reveal transitions.
-- Tech: Vite + React + TypeScript, React Flow (built‑in edges), Tailwind, Zustand, Vitest, Playwright.
-- Data: spec‑driven synthetic event log for Restaurant Operating Permit process. Primary storage: JSONL.GZ events, with precomputed `graph.json` for fast load.
-- Interactions: left‑click expands a node; right‑click context menu supports decouple by attribute with downstream propagation (and undo/reset); per‑node collapse; reset expansion. Edge hover tooltip shows mean/p90 duration.
+## Visual Style Summary
+- Theme: light, minimal, diagram‑first; controls stay subtle and secondary.
+- Typography: Inter/Segoe/Roboto/Arial; labels 12–14px; headings ~18px; semibold sparingly.
+- Colors: background white/light gray; text dark gray; borders light gray; soft shadows.
+- Nodes: rounded rectangles (12px radius), white fill, subtle border; selected gets a light blue tint.
+- Edges: base edges neutral gray; decoupled overlays color = duration (gentle green→red, relative per transition); thickness = log‑scaled by count.
+- Labels: lift off lines; light background for readability; hover tooltip shows mean/p90 and details.
+- Context menu: white card with soft shadow; icon + label items; no submenus.
+- Legend: footer strip indicates “Thickness = #cases; Color = duration (green→red, relative per transition)”.
+- Interaction: smooth, subtle animations (~200ms); clear focus ring; auto‑fit on changes and window resize.
 
 ## Common Bash Commands
 - Install: `npm install`
@@ -48,30 +54,39 @@ This file guides coding agents working in this repo. It explains how to run, tes
 - `src/components/LegendBar.tsx` / `src/components/VariantsPanel.tsx`
   - Legend indicates Thickness = #cases; Color = duration (green→red, relative per transition).
   - Variants panel shows Top N paths; selecting one reveals that exact path.
+- `src/components/HappyPathToggle.tsx`
+  - Toggle for showing a happy‑path underlay/overlay derived from the most common variant.
 - `src/components/ContextMenu.tsx` / `src/components/EdgeTooltip.tsx`
   - Context menu: Decouple by Person/Undo (node‑local), Collapse following, Expand from node. A downstream reset exists in store and tests and may be surfaced in UI.
   - Edge tooltip shows mean/p90 duration on hover.
 - `src/state/store.ts`
   - Zustand store with `graph`, `layout`, `expanded`, `selection`, `variants`, `activeVariantId`, `decouples`, `decoupleView`, and `getVisible()`.
   - Reveal starts from `START`; left‑click expands nodes. Selecting a variant reveals that exact path.
-  - Data model simplified to resource (person) only; department/other attributes removed from UI logic.
+  - Data model simplified to resource (person) only; department/other attributes removed from UI logic. Decouple is node‑local by person.
 - `src/lib/graph.ts`
   - Build graph from event log. Adds synthetic `START` node and per‑transition traversals/durations.
 - `src/lib/step.ts`
   - Step filtering utilities and `maxDepth`.
 - `src/lib/layout.ts`
   - Simple BFS layering for deterministic positions.
-- `src/data/sampleEvents.ts`
-  - Synthetic dataset (~30 events) across ~6 activities.
-- `docs/permit_process_spec.json`
-  - Declarative spec for Restaurant Operating Permit process (states, transitions, resources, durations, capacities).
-- `scripts/generate_from_spec.mjs`
-  - Spec‑driven generator that emits JSONL(.gz) events.
-- `scripts/precompute_graph.mjs`
-  - Precomputes `public/data/permit.small.graph.json` and `public/data/permit.small.events.json` from JSONL for fast UI.
+- Data generation & precompute
+  - `scripts/generate_from_definition.mjs` — emit JSONL events from `docs/process.definition.json`.
+  - `scripts/precompute_graph.mjs` — produce `public/data/permit.prod.graph.json` and `public/data/permit.prod.events.json` from JSONL.
 - Tests
   - `src/lib/*.spec.ts` + `src/state/*.spec.ts`: unit tests for pure utils and store actions (expand/collapse, decouple, downstream reset).
   - `tests/*.spec.ts`: Playwright smoke and screenshots (context menu, decouple/undo/reset, edge bend).
+
+## Process Model & Data Generation
+- Canonical definition: `docs/process.definition.json` with:
+  - `states { id, name, exceptional, expected { mean_mins, std_mins }, workers { name, role, share, speed_factor } }`
+  - `transitions`, `variants { id, name, percent, path }`, `happy_path`
+  - `data_generation { cases, seed, temperature, noise.time_sigma, exceptional_rates.* }`
+- Generator: `scripts/generate_from_definition.mjs` produces JSONL `{ case_id, activity, timestamp, resource }` by:
+  - picking a variant by weight; optionally injecting INFO_REQUEST loops or MANAGER_APPROVAL per `exceptional_rates` scaled by `temperature`
+  - picking workers by `share`, sampling durations (mins) around expected values with multiplicative noise
+- Precompute: `scripts/precompute_graph.mjs` converts JSONL to `permit.prod.graph.json` with edges’ `count`, `traversals`, derived stats, and adjacency; and emits a normalized `permit.prod.events.json` array.
+- Variants (mined from events): `src/lib/traces.ts` groups by case, orders by time, collapses consecutive repeats, ranks by frequency, and exposes `{ id, label, path, count }`.
+- Single source in-app: `public/data/permit.prod.*` only. No fallbacks.
 
 ## Code Style Guidelines
 - TypeScript strict mode; avoid `any` unless necessary.

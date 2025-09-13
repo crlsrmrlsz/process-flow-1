@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { sampleEvents } from '@/data/sampleEvents';
 import { buildGraph, START_NODE_ID, bfsLayers } from '@/lib/graph';
 import { computeLayout } from '@/lib/layout';
 import { computeVisibleFromExpanded } from '@/lib/visible';
@@ -106,30 +105,21 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       try {
         if (typeof window !== 'undefined' && 'fetch' in window) {
           const controller = new AbortController();
-          const timer = window.setTimeout(() => controller.abort(), 1200);
+          const timer = window.setTimeout(() => controller.abort(), 3000);
           try {
-            async function tryBase(base: string) {
-              const [gRes, eRes] = await Promise.all([
-                fetch(`/data/${base}.graph.json`, { signal: controller.signal }).catch(() => null),
-                fetch(`/data/${base}.events.json`, { signal: controller.signal }).catch(() => null),
-              ]);
-              if (gRes && gRes.ok && eRes && eRes.ok) {
-                return [await gRes.json(), await eRes.json()] as const;
-              }
-              return null;
-            }
-            const loaded = (await tryBase('permit.prod')) || (await tryBase('permit.small'));
-            if (loaded) {
-              const [graphPre, eventsRaw] = loaded as [Graph, any[]];
-              const events = normalizeEvents(eventsRaw);
+            const [gRes, eRes] = await Promise.all([
+              fetch(`/data/permit.prod.graph.json`, { signal: controller.signal }).catch(() => null),
+              fetch(`/data/permit.prod.events.json`, { signal: controller.signal }).catch(() => null),
+            ]);
+            if (gRes && gRes.ok && eRes && eRes.ok) {
+              const graphPre = (await gRes.json()) as Graph;
+              const events = normalizeEvents(await eRes.json());
               const graph = needsStartRebuild(graphPre) ? buildGraph(events) : graphPre;
               const layout = computeLayout(graph, [START_NODE_ID]);
               const expectedMins = computeExpectedMins(graph);
               const variants = mineTopTraces(events, 6);
               set({ events, graph, layout, eventsLoaded: true, expanded: new Set([START_NODE_ID]), variants, expectedMins, happyPath: variants.length ? variants[0].path : [] });
-              if (variants.length > 0) {
-                get().setActiveVariant(variants[0].id);
-              }
+              if (variants.length > 0) get().setActiveVariant(variants[0].id);
               return;
             }
           } finally {
@@ -137,16 +127,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           }
         }
       } catch {}
-      // Fallback to bundled sample
-      const events = sampleEvents;
-      const graph = buildGraph(events);
-      const layout = computeLayout(graph, [START_NODE_ID]);
-      const expectedMins = computeExpectedMins(graph);
-      const variants = mineTopTraces(events, 6);
-      set({ events, graph, layout, eventsLoaded: true, expanded: new Set([START_NODE_ID]), variants, expectedMins, happyPath: variants.length ? variants[0].path : [] });
-      if (variants.length > 0) {
-        get().setActiveVariant(variants[0].id);
-      }
+      // No fallbacks: keep events unloaded if dataset is missing
+      set({ eventsLoaded: false });
     })();
   },
   expandNode: (id) => set((state) => ({ expanded: new Set<string>([...state.expanded, id]), activeVariantId: null })),

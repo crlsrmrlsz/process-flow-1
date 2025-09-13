@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { EventLogEvent } from '@/types';
 import { buildGraph, START_NODE_ID } from './graph';
 import { computeVisibleFromExpanded } from './visible';
-import { sampleEvents } from '@/data/sampleEvents';
 
 describe('computeVisibleFromExpanded', () => {
-  const g = buildGraph(sampleEvents);
+  const events: EventLogEvent[] = JSON.parse(
+    fs.readFileSync(path.resolve(process.cwd(), 'public/data/permit.prod.events.json'), 'utf8'),
+  );
+  const g = buildGraph(events);
 
   it('shows only START when nothing expanded; stubs indicate expandability from START', () => {
     const res = computeVisibleFromExpanded(g, new Set());
@@ -28,4 +33,3 @@ describe('computeVisibleFromExpanded', () => {
     expect(res.stubs.length).toBeGreaterThan(0);
   });
 });
-

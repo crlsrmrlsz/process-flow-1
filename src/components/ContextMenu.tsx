@@ -32,7 +32,6 @@ export function ContextMenu() {
 
     // Helpers
     const outgoing = (nodeId: string) => graph.edges.filter((e) => e.source === nodeId);
-    const edgeById = (id: string) => graph.edges.find((e) => e.id === id);
     const conceptPath = {
       person: 'resource',
     } as const;
