@@ -71,6 +71,13 @@ function CanvasInner() {
         }
       }
     }
+    // Build set of happy-path nodes when toggled
+    const happySet: Set<string> = (() => {
+      if (!showHappyPath || happyPath.length === 0) return new Set<string>();
+      const s = new Set<string>([START_NODE_ID, ...happyPath]);
+      return s;
+    })();
+
     const nodes: Node[] = graph.nodes
       .filter((n) => visibleNodes.has(n.id) || n.id === START_NODE_ID)
       .map((n) => ({
@@ -81,6 +88,7 @@ function CanvasInner() {
           label: truncateLabel(friendlyName(n.id)),
           title: friendlyName(n.id),
           active: selection?.type === 'node' && selection.id === n.id,
+          happy: happySet.has(n.id),
           terminalInfo: terminals.has(n.id)
             ? (() => {
                 const st = termInfo[n.id];
@@ -118,11 +126,12 @@ function CanvasInner() {
     const perfColor = (actualMs?: number, expectedMin?: number) => {
       if (!actualMs || !expectedMin || expectedMin <= 0) return '#9ca3af';
       const r = actualMs / (expectedMin * 60_000);
-      if (r <= 0.7) return '#16a34a'; // much faster
-      if (r <= 0.9) return '#86efac'; // faster
-      if (r < 1.1) return '#9ca3af'; // normal
-      if (r <= 1.4) return '#f59e0b'; // slower
-      return '#dc2626'; // much slower
+      // Lighter palette for standard transitions so happy path stands out
+      if (r <= 0.7) return '#34d399'; // much faster (green-400)
+      if (r <= 0.9) return '#a7f3d0'; // faster (green-200)
+      if (r < 1.1) return '#cbd5e1'; // normal (slate-300)
+      if (r <= 1.4) return '#fcd34d'; // slower (amber-300)
+      return '#f87171'; // much slower (red-400)
     };
     const meanDays = (ms?: number) => {
       if (!ms || ms <= 0) return '0d';
@@ -170,8 +179,8 @@ function CanvasInner() {
           target: tgt,
           type: 'bundled',
           data: { idx: 0, count: 1, isBase: true, isOverlay: true },
-          style: { stroke: '#4b5563', strokeWidth: 1.5, opacity: 0.9 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563', width: 8, height: 8, orient: 'auto' },
+          style: { stroke: '#374151', strokeWidth: 1.8, opacity: 0.95 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#374151', width: 8, height: 8, orient: 'auto' },
           interactionWidth: 0,
         } as Edge;
       });

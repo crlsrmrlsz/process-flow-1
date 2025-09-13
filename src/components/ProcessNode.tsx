@@ -3,7 +3,7 @@ import type { NodeProps } from 'reactflow';
 import { Handle, Position, NodeToolbar } from 'reactflow';
 import { useFlowStore } from '@/state/store';
 
-export type ProcessNodeData = { label: string; title?: string; active?: boolean; terminalInfo?: string };
+export type ProcessNodeData = { label: string; title?: string; active?: boolean; terminalInfo?: string; happy?: boolean };
 
 export const ProcessNode = memo(function ProcessNode({ id, data }: NodeProps<ProcessNodeData>) {
   const setSelection = useFlowStore((s) => s.setSelection);
@@ -16,6 +16,7 @@ export const ProcessNode = memo(function ProcessNode({ id, data }: NodeProps<Pro
     [id, setSelection],
   );
   const isTerminal = Boolean(data?.terminalInfo);
+  const isHappy = Boolean(data?.happy);
   return (
     <div
       data-testid={`node-${id}`}
@@ -27,6 +28,8 @@ export const ProcessNode = memo(function ProcessNode({ id, data }: NodeProps<Pro
           ? 'bg-zinc-100 border-zinc-200 text-zinc-600'
           : data?.active
           ? 'bg-blue-50 border-blue-300 text-blue-900 cursor-pointer'
+          : isHappy
+          ? 'bg-zinc-100 border-zinc-400 text-zinc-900 cursor-pointer'
           : 'bg-white border-zinc-200 text-zinc-900 hover:bg-zinc-50 hover:border-zinc-300 cursor-pointer'
       }`}
     >
