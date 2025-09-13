@@ -6,12 +6,14 @@ function parseArgs() {
   const args = process.argv.slice(2);
   let inPath = 'data/permit.small.events.jsonl';
   let outDir = 'public/data';
+  let name = 'permit.small';
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--in') inPath = args[++i];
     else if (a === '--outdir') outDir = args[++i];
+    else if (a === '--name') name = args[++i];
   }
-  return { inPath, outDir };
+  return { inPath, outDir, name };
 }
 
 function buildGraph(events) {
@@ -92,11 +94,11 @@ function groupBy(list, keyFn) {
 }
 
 async function main() {
-  const { inPath, outDir } = parseArgs();
+  const { inPath, outDir, name } = parseArgs();
   const jsonl = fs.readFileSync(inPath, 'utf8').split(/\n+/).filter(Boolean).map((line) => JSON.parse(line));
   const graph = buildGraph(jsonl);
   fs.mkdirSync(outDir, { recursive: true });
-  fs.writeFileSync(path.join(outDir, 'permit.small.graph.json'), JSON.stringify(graph));
+  fs.writeFileSync(path.join(outDir, `${name}.graph.json`), JSON.stringify(graph));
   // Also emit a JSON array of normalized events for the app to load if needed
   const normEvents = jsonl.map((e) => ({
     caseId: e.case_id,
@@ -104,8 +106,8 @@ async function main() {
     timestamp: e.timestamp,
     resource: e.resource,
   }));
-  fs.writeFileSync(path.join(outDir, 'permit.small.events.json'), JSON.stringify(normEvents));
-  console.log('Wrote', path.join(outDir, 'permit.small.graph.json'));
+  fs.writeFileSync(path.join(outDir, `${name}.events.json`), JSON.stringify(normEvents));
+  console.log('Wrote', path.join(outDir, `${name}.graph.json`));
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

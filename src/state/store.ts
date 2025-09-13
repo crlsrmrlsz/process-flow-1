@@ -25,6 +25,8 @@ type FlowState = {
   variants: Variant[];
   activeVariantId: string | null;
   expectedMins: Record<string, number>; // expected minutes per state id (fallback from observed graph)
+  showHappyPath: boolean;
+  happyPath: string[];
   init: () => void;
   expandNode: (id: string) => void;
   collapseNode: (id: string) => void;
@@ -63,6 +65,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   variants: [],
   activeVariantId: null,
   expectedMins: {},
+  showHappyPath: false,
+  happyPath: [],
 
   init: () => {
     (async () => {
@@ -103,11 +107,19 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           const controller = new AbortController();
           const timer = window.setTimeout(() => controller.abort(), 1200);
           try {
-            const [gRes, eRes] = await Promise.all([
-              fetch('/data/permit.small.graph.json', { signal: controller.signal }).catch(() => null),
-              fetch('/data/permit.small.events.json', { signal: controller.signal }).catch(() => null),
-            ]);
-            if (gRes && gRes.ok && eRes && eRes.ok) {
+            async function tryBase(base: string) {
+              const [gRes, eRes] = await Promise.all([
+                fetch(`/data/${base}.graph.json`, { signal: controller.signal }).catch(() => null),
+                fetch(`/data/${base}.events.json`, { signal: controller.signal }).catch(() => null),
+              ]);
+              if (gRes && gRes.ok && eRes && eRes.ok) {
+                return [await gRes.json(), await eRes.json()] as const;
+              }
+              return null;
+            }
+            const loaded = (await tryBase('permit.prod')) || (await tryBase('permit.small'));
+            if (loaded) {
+              const [graphPre, eventsRaw] = loaded as any;
               const graphPre = (await gRes.json()) as Graph;
               const eventsRaw = (await eRes.json()) as any[];
               const events = normalizeEvents(eventsRaw);
@@ -115,7 +127,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
               const layout = computeLayout(graph, [START_NODE_ID]);
               const expectedMins = computeExpectedMins(graph);
               const variants = mineTopTraces(events, 6);
-              set({ events, graph, layout, eventsLoaded: true, expanded: new Set([START_NODE_ID]), variants, expectedMins });
+              set({ events, graph, layout, eventsLoaded: true, expanded: new Set([START_NODE_ID]), variants, expectedMins, happyPath: variants.length ? variants[0].path : [] });
               if (variants.length > 0) {
                 get().setActiveVariant(variants[0].id);
               }
@@ -132,7 +144,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       const layout = computeLayout(graph, [START_NODE_ID]);
       const expectedMins = computeExpectedMins(graph);
       const variants = mineTopTraces(events, 6);
-      set({ events, graph, layout, eventsLoaded: true, expanded: new Set([START_NODE_ID]), variants, expectedMins });
+      set({ events, graph, layout, eventsLoaded: true, expanded: new Set([START_NODE_ID]), variants, expectedMins, happyPath: variants.length ? variants[0].path : [] });
       if (variants.length > 0) {
         get().setActiveVariant(variants[0].id);
       }
@@ -283,4 +295,5 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     const expanded = new Set<string>([START_NODE_ID, ...v.path]);
     set({ expanded, activeVariantId: id, decouples: [], decoupleView: null });
   },
+  setShowHappyPath: (val: boolean) => set({ showHappyPath: val }),
 }));
