@@ -1,6 +1,6 @@
 # Phase 2 Plan — Person‑Centric, Light‑Theme UI
 
-This plan replaces prior Phase‑2 content. It aligns to prompts/visuals.md and the clarified product goals.
+This plan replaces prior Phase‑2 content. It aligns to docs/visuals.md and the clarified product goals.
 
 ## A. Summary & Scope
 - Data model stripped to essentials: { caseId, activity, timestamp, resource }.
@@ -13,18 +13,41 @@ This plan replaces prior Phase‑2 content. It aligns to prompts/visuals.md and 
 - Friendly state names via a mapping table (short, readable labels, safe truncation).
 - Screen composition (vertical): title at top, minimal legend at bottom, diagram centered. Variants panel (Top 6) floats in canvas top‑right gap between START and first layer.
 
-## B. Visual Design (from prompts/visuals.md, adapted)
-- Theme: light, minimal, modern. Diagram remains primary.
-- Typography: Inter/Segoe/Roboto/Arial; labels 12–14px, headings ~18px; semibold for emphasis.
+## Plan Status
+- ~~B. Visual Design~~
+- ~~E.5 Edge Labels and Color Scale~~
+- ~~E.7 Layout & Screen Composition~~
+- ~~E.2 Node‑local Decouple by Person~~
+- ~~E.3 Collapse / Expand All (basic)~~
+- ~~E.1 Data Simplification (resource‑only)~~
+- ~~E.4 Terminal Nodes~~
+- ~~E.6 Friendly State Names~~
+- ~~E.8 Variants Panel (Top‑6)~~
+- E.9 Tests & Docs — ongoing
+
+### Implementation Notes vs Plan
+- Decoupled rendering is implemented with a custom bundled edge (`BundledEdge`) including a draggable bend handle for manual tuning.
+- Legend and light theme are implemented; edge color maps duration per transition (green→red) relative to local range.
+- Variants panel mines top paths and allows one‑click reveal; app auto‑selects the most common variant on load.
+- Store includes `resetDecouplesDownstream(nodeId)` and `undoDecoupleByPathDownstream(nodeId, path)`. The context menu currently exposes node‑local Decouple/Undo and Collapse/Expand; downstream reset is verified in tests and may be surfaced in the menu later.
+
+## B. Visual Design (from docs/visuals.md, adapted)
+Status: Completed
+
+- Theme: light, minimal, modern. Diagram remains primary. Title centered.
+- Typography: Inter/Segoe/Roboto/Arial; labels ~10–12px, headings ~18px; semibold for emphasis.
 - Colors:
   - Background: white/light gray; text dark gray; subtle borders and soft shadows.
   - Nodes: neutral (white, subtle border); selected node light blue tint.
-  - Edges: thickness = volume (2–6px); color encodes duration (we reserve color for edges). Non‑selected edges may fade.
+  - Edges: thickness = volume (log 0.3–3px). Base edges neutral gray; decoupled edges use a gentle pastel green→yellow→red scale.
+  - Decoupled edge colors are relative per transition: within each decoupled bundle, fastest = greener, slowest = redder (based on local min/max mean duration).
 - Context Menu: white card, rounded, soft shadow, simple items (icon + label), no submenus.
-- Legend: fixed footer strip; minimal text explaining “thickness = volume, color = time”.
-- Interaction: subtle, smooth animations (~200ms), soft hovers, clear focus ring.
+- Legend: fixed footer strip; “Thickness = #cases; Color = duration (green→red, relative per transition)”.
+- Interaction: subtle, smooth animations (~200ms), soft hovers, clear focus ring (keyboard only).
+- Arrowheads: smaller/thinner, ~11×11, `orient: auto`.
+- Centering: diagram re‑fits to remain centered on viewport resize.
 
-Note: visuals.md suggests color for variants; we instead use color for duration per product requirement. Variants are accessed via the Top‑6 panel.
+Note: visuals.md suggests color for variants; we instead use color for duration per product requirement. Variants are accessed via the Top‑6 panel (not yet implemented).
 
 ## C. Data Design
 ### Event schema (final)
@@ -71,21 +94,23 @@ type Event = { caseId: CaseId; activity: string; timestamp: ISO; resource?: stri
    - Acceptance: unit for terminal detection; E2E visual.
 
 5) Edge Labels and Color Scale
-   - Base label “(#count/μdays)” (days = mean); add color scale by mean duration (clamped); keep thickness log(count).
-   - Decouple view shows person line with icon + color bar.
-   - Acceptance: unit for color mapping; E2E screenshot assertions.
+   - Base label “(#count/μdays)” (days = mean); base edges remain neutral gray; thickness log(count).
+   - Decoupled view shows person line with icon + color bar; color palette is a gentle pastel green→yellow→red and is relative per transition (local min/max of mean times).
+   - Acceptance: unit for color mapping; E2E screenshot assertions (including relative scaling correctness).
 
 6) Friendly State Names
-   - Add mapping table (e.g., INFO_REQUEST → “Request info to applicant”), with truncation.
-   - Acceptance: unit for mapping; UI shows friendly labels.
+   - Add mapping table (e.g., INFO_REQUEST → “Information Request”), with safe truncation + title tooltip.
+   - Acceptance: UI shows friendly labels (truncated where needed), full text on hover.
 
 7) Layout & Screen Composition
-   - Title at top (short description), legend at bottom, diagram centered; maintain vertical flow. Switch to light theme per visuals.md.
-   - Acceptance: E2E screenshots show layout and legend.
+   - Title at top (centered), legend at bottom, diagram centered and re‑fits on resize; maintain vertical flow. Light theme per visuals.md.
+   - Acceptance: E2E screenshots show centered layout and legend; resizing keeps diagram centered.
 
-8) Variants Panel (Top 6)
-   - `traceMining.ts`, store for active variant and “dirty” flag; overlay UI at top‑right gap.
-   - Acceptance: unit for top‑6; E2E selecting variant, then unpress on manual edits.
+8) Variants Panel (Top 10)
+   - `lib/traces.ts` mines top‑10 paths; store keeps `variants` and `activeVariantId`; overlay UI at top‑right.
+   - Selecting a variant shows that exact variant only (independent of previous diagram state). Manual edits (expand/collapse/decouple) unselect the active variant. Auto‑select most common on load.
+   - Buttons display as “<percent>% cases” (not state sequence). The rank is shown as a small badge.
+   - Acceptance: visual — panel renders top‑10; clicking a variant shows only that variant; subsequent manual edits clear selection.
 
 9) Tests & Docs
    - Update unit/E2E for the new model and interactions; update README and AGENTS.md.
