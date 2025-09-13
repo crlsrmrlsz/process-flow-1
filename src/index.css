@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --pane-bg: theme('colors.zinc.800');
+  --pane-bg: theme('colors.white');
 }
 
 html, body, #root {

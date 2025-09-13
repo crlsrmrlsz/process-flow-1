@@ -1,6 +1,5 @@
 import { useMemo, useCallback, useEffect } from 'react';
 import ReactFlow, {
-  Background,
   Controls,
   Node,
   Edge,
@@ -403,7 +402,6 @@ function CanvasInner() {
         proOptions={{ hideAttribution: true }}
       >
         <Controls />
-        <Background color="#e5e7eb" gap={24} />
       </ReactFlow>
     </div>
   );
