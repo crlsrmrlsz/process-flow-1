@@ -231,7 +231,7 @@ function CanvasInner() {
       }
       // Finalize base edges with styles
       const baseEdges: Edge[] = baseEdgesRaw.map((be) => {
-        const col = perfColor(be.e.meanMs, expectedMins[be.source]);
+        const col = '#cbd5e1'; // neutral for base edges
         return {
           id: be.id,
           source: be.source,
@@ -254,7 +254,7 @@ function CanvasInner() {
     const edges: Edge[] = [
       ...overlayUnderEdges,
       ...baseEdgesRaw.map((be) => {
-      const col = perfColor(be.e.meanMs, expectedMins[be.source]);
+      const col = '#cbd5e1'; // neutral for base edges
       return {
         id: be.id,
         source: be.source,
